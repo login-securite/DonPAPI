@@ -8,7 +8,7 @@ We aim at locating those "secured" credentials, and retreive them using :
 - domaine DPAPI BackupKey
 - Local machine DPAPI Key (that protect TaskScheduled Blob)
 
-#Curently gathered info: 
+## Curently gathered info: 
 - Windows credentials (Taskscheduled credentials & a lot more)
 - Windows Vaults
 - Windows RDP credentials 
@@ -20,11 +20,11 @@ We aim at locating those "secured" credentials, and retreive them using :
 - VNC passwords
 - mRemoteNG password (with default config)
 
-#Check for a bit of compliance
+## Check for a bit of compliance
 - smb signing enabled
 - OS/Domain/Hostname/Ip of the audited scope
 
-# Operational use 
+## Operational use 
 with local admin account on a machine, we can :
 - gather Machine protected DPAPI secrets, like ScheduledTask, that will contains cleartext login/password of the account that should run the task (Also Wifi passwords)
 - extract Masterkey's hash value for every users profiles (masterkeys beeing protected by the user's password, let's try to crack them with Hashcat)
@@ -35,7 +35,7 @@ With a user password, or the domain PVK we can unprotect it's DPAPI Secrets.
 you can pass a full list of credentials that will be tested on the machine.
 - gather protected secrets from IE, Chrome, Firefox and start reaching the Azure tenant. 
 
-# Exemples 
+## Exemples 
 dump all secrets of our target machine with an admin account : 
 
 ```python DonPAPI.py Domain/user:passw0rd@target```
@@ -61,7 +61,7 @@ you got domain admin access and dumped the domain backup key ? (impacket dpapi.p
 target can be an IP, IP range, CIDR, file containing list of the above targets (one per line)
 
 
-# Opsec consideration
+## Opsec consideration
 The RemoteOps part can be spoted by some EDR. 
 has it's only real use is to get DPAPI Machine key, it could be deactivated (--no_remoteops). but no more taskscheduled credentials in that case.
 
