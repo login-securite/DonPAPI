@@ -1,0 +1,7 @@
+impacket
+#json
+pyasn
+LnkParse3
+wheel
+#M2Crypto
+#pycryptodome
