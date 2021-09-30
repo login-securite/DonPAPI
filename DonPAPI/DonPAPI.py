@@ -81,10 +81,7 @@ def main():
 
     group = parser.add_argument_group('Reporting')
     group.add_argument('-R', '--report', action="store_true", help='Only Generate Report on the scope', default=False)
-    group.add_argument('--type', action="store",
-                       help='only report "type" password (wifi,credential-blob,browser-internet_explorer,LSA,SAM,taskscheduler,VNC,browser-chrome,browser-firefox')
-    group.add_argument('-u', '--user', action="store_true", help='only this username')
-    group.add_argument('--target', action="store_true", help='only this target (url/IP...)')
+    group.add_argument('--type', action="store", help='Only report "type" password (wifi,credential-blob,browser-internet_explorer,LSA,SAM,taskscheduler,VNC,browser-chrome,browser-firefox')
 
     group = parser.add_argument_group('attacks')
     group.add_argument('--no_browser', action="store_true", help='do not hunt for browser passwords', default=False)
