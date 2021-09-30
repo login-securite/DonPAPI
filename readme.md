@@ -2,13 +2,14 @@
 Dumping revelant information on compromised targets without AV detection
 
 ## DPAPI dumping
-Lots of credentials are protected by DPAPI (link )
-We aim at locating those "secured" credentials, and retreive them using :
-- user password
-- domaine DPAPI BackupKey
-- Local machine DPAPI Key (that protect TaskScheduled Blob)
+Lots of credentials are protected by [DPAPI](https://docs.microsoft.com/en-us/dotnet/standard/security/how-to-use-data-protection).
 
-## Curently gathered info: 
+We aim at locating those "secured" credentials, and retreive them using :
+- User password
+- Domaine DPAPI BackupKey
+- Local machine DPAPI Key (protecting `TaskScheduled` blob)
+
+## Curently gathered info
 - Windows credentials (Taskscheduled credentials & a lot more)
 - Windows Vaults
 - Windows RDP credentials 
@@ -21,70 +22,108 @@ We aim at locating those "secured" credentials, and retreive them using :
 - mRemoteNG password (with default config)
 
 ## Check for a bit of compliance
-- smb signing enabled
+- SMB signing status
 - OS/Domain/Hostname/Ip of the audited scope
 
-## Operational use 
-with local admin account on a machine, we can :
-- gather Machine protected DPAPI secrets, like ScheduledTask, that will contains cleartext login/password of the account that should run the task (Also Wifi passwords)
-- extract Masterkey's hash value for every users profiles (masterkeys beeing protected by the user's password, let's try to crack them with Hashcat)
-- Identify who is connected from where, in order to identify Admin's personal machines. 
-- extract other non-dpapi protected secrets (VNC/Firefox/mRemoteNG)
+## Operational use
 
-With a user password, or the domain PVK we can unprotect it's DPAPI Secrets. 
-you can pass a full list of credentials that will be tested on the machine.
-- gather protected secrets from IE, Chrome, Firefox and start reaching the Azure tenant. 
+With local admin account on a host, we can :
+- Gather machine protected DPAPI secrets
+  - ScheduledTask that will contain cleartext login/password of the account configured to run the task
+  - Wi-Fi passwords
+- Extract Masterkey's hash value for every user profiles (masterkeys beeing protected by the user's password, let's try to crack them with Hashcat)
+- Identify who is connected from where, in order to identify admin's personal computers. 
+- Extract other non-dpapi protected secrets (VNC/Firefox/mRemoteNG)
+- Gather protected secrets from IE, Chrome, Firefox and start reaching the Azure tenant.
 
-## Exemples 
-dump all secrets of our target machine with an admin account : 
+With a user password, or the domain PVK we can unprotect the user's DPAPI secrets.  
 
-```python DonPAPI.py Domain/user:passw0rd@target```
+## Examples
 
-connect with PTH
+Dump all secrets of the target machine with an admin account : 
 
-```python DonPAPI.py -Hashes XXXXXXXXXX Domain/user@target```
+```bash
+DonPAPI.py domain/user:passw0rd@target
+```
 
-can do kerberos (-k), and local auth (-local_auth)
+Using user's hash
 
-connect with an account that have LAPS rights:
+```bash
+DonPAPI.py --hashes <LM>:<NT> domain/user@target
+```
 
-```python DonPAPI.py -laps Domain/user:passw0rd@target```
+Using kerberos (-k) and local auth (-local_auth)
 
-you have a few users passwords ? just give them to DonPAPI and it will try to use them to decipher masterkeys of these users. (the file have to contain user:pass, one per line)
+```bash
+DonPAPI.py -k domain/user@target
+DonPAPI.py -local_auth user@target
+```
 
-```python DonPAPI.py -credz credz_file Domain/user:passw0rd@target```
+Using a user with LAPS password reading rights
 
-you got domain admin access and dumped the domain backup key ? (impacket dpapi.py backupkey --export). them dump all secrets of all users of the domain !
+```bash
+DonPAPI.py -laps domain/user:passw0rd@target
+```
 
-`python DonPAPI.py -pvk domain_backupkey.pvk -credz file_with_Login:pass Domain/user:passw0rd@domain_network_list`
+It is also possible to provide the tool with a list of credentials that will be tested on the target. DonPAPI will try to use them to decipher masterkeys.
 
-target can be an IP, IP range, CIDR, file containing list of the above targets (one per line)
+This credential file must have the following syntax:
+
+```plain
+user1:pass1
+user2:pass2
+...
+```
+
+```bash
+DonPAPI.py -credz credz_file.txt domain/user:passw0rd@target
+```
+
+When a domain admin user is available, it is possible to dump the domain backup key using impacket `dpapi.py` tool. 
+
+```bash
+dpapi.py backupkey --export
+```
+
+This backup key can then be used to dump all domain user's secrets!
+
+`python DonPAPI.py -pvk domain_backupkey.pvk domain/user:passw0rd@domain_network_list`
+
+Target can be an IP, IP range, CIDR, file containing list targets (one per line)
 
 
 ## Opsec consideration
-The RemoteOps part can be spoted by some EDR. 
-has it's only real use is to get DPAPI Machine key, it could be deactivated (--no_remoteops). but no more taskscheduled credentials in that case.
+The RemoteOps part can be spoted by some EDR. It can be disabled using `--no_remoteops` flag, but then the machine DPAPI key won't be retrieved, and scheduled task credentials/Wi-Fi passwords won't be harvested. 
 
-# INSTALL 
+## Installation 
 ```
 git clone https://github.com/login-securite/DonPAPI.git
-pip install -r requirements.txt
+cd DonPAPI
+python3 -m pip install -r requirements.txt
 python3 DonPAPI.py
 ```
 
-# Credits
+## Credits
 All the credits goes to these great guys for doing the hard research & coding : 
-- Benjamin Delpy (@gentilkiwi) for most of the DPAPI research (always greatly commented - <3 your code)
-- Alberto Solino (@agsolino) for the tremendous work of Impacket (https://github.com/SecureAuthCorp/impacket). Almost everything we do here comes from impacket. 
-- Alesandro Z (@) & everyone who worked on Lazagne (https://github.com/AlessandroZ/LaZagne/wiki) for the VNC & Firefox modules, and most likely for a lots of other ones in the futur. 
-- dirkjanm @dirkjanm for the base code of adconnect dump (https://github.com/fox-it/adconnectdump) & every research he ever did. i learned so much on so many subjects thanks to you. <3
-- @Byt3bl3d33r for CME (lots of inspiration and code comes from CME : https://github.com/byt3bl33d3r/CrackMapExec )
-- All the Team of @LoginSecurite for their help in debugging my shity code (special thanks to @layno & @HackAndDo for that)
+- Benjamin Delpy ([@gentilkiwi](https://twitter.com/gentilkiwi)) for most of the DPAPI research (always greatly commented, <3 your code)
+- Alberto Solino ([@agsolino](https://twitter.com/agsolino)) for the tremendous work of Impacket (https://github.com/SecureAuthCorp/impacket). Almost everything we do here comes from impacket. 
+- [Alesandro Z](https://github.com/AlessandroZ) & everyone who worked on Lazagne (https://github.com/AlessandroZ/LaZagne/wiki) for the VNC & Firefox modules, and most likely for a lots of other ones in the futur. 
+- dirkjanm [@_dirkjan](https://twitter.com/_dirkjan) for the base code of adconnect dump (https://github.com/fox-it/adconnectdump) & every research he ever did. I learned so much on so many subjects thanks to you. <3
+- [@byt3bl33d3r](https://twitter.com/byt3bl33d3r) for CME (lots of inspiration and code comes from CME : https://github.com/byt3bl33d3r/CrackMapExec )
+- All the Team at [@LoginSecurite](https://twitter.com/LoginSecurite) for their help in debugging my shity code (special thanks to [@layno](https://github.com/clayno) & [@HackAndDo](https://twitter.com/HackAndDo) for that)
 
-# TODO
-- finish ADSync/ADConnect password extraction
+## Todo
+- Dinish ADSync/ADConnect password extraction
 - CREDHISTORY full extraction
-- extract windows Certificates
-- further analyse ADAL/msteams
-- implement Chrome <v80 decoder
-- find a way to implement Lazagne's great modules
+- Extract windows Certificates
+- Further analysis ADAL/msteams
+- Omplement Chrome <v80 decoder
+- Find a way to implement Lazagne's great modules
+
+# Changelog
+
+  ```
+  v1.0
+  ----
+  Initial release
+  ```
