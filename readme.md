@@ -113,11 +113,11 @@ All the credits goes to these great guys for doing the hard research & coding :
 - All the Team at [@LoginSecurite](https://twitter.com/LoginSecurite) for their help in debugging my shity code (special thanks to [@layno](https://github.com/clayno) & [@HackAndDo](https://twitter.com/HackAndDo) for that)
 
 ## Todo
-- Dinish ADSync/ADConnect password extraction
+- Finish ADSync/ADConnect password extraction
 - CREDHISTORY full extraction
 - Extract windows Certificates
 - Further analysis ADAL/msteams
-- Omplement Chrome <v80 decoder
+- Implement Chrome <v80 decoder
 - Find a way to implement Lazagne's great modules
 
 # Changelog
