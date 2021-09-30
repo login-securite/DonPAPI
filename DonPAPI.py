@@ -182,7 +182,7 @@ def main():
 		my_report = reporting(sqlite3.connect(options.db_path), logging, options, targets)
 		my_report.generate_report()
 		if options.GetHashes:
-			my_report.export_hashes()
+			my_report.export_MKF_hashes()
 			my_report.export_dcc2_hashes()
 
 	#attendre la fin de toutes les threads ?
