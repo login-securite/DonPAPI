@@ -78,8 +78,8 @@ def main():
 	group.add_argument('--no_vnc', action="store_true", help='do not hunt for VNC passwords', default=False)
 	group.add_argument('--no_remoteops', action="store_true", help='do not hunt for SAM and LSA with remoteops', default=False)
 	group.add_argument('--GetHashes', action="store_true", help="Get all users Masterkey's hash & DCC2 hash", default=False)
-	group.add_argument('--no_recent', action="store_true", help="Get recent files", default=False)
-	group.add_argument('--no_sysadmins', action="store_true", help="Get sysadmins stuff (mRemoteNG, vnc, keepass, lastpass ...)", default=False)
+	group.add_argument('--no_recent', action="store_true", help="Do not hunt for recent files", default=False)
+	group.add_argument('--no_sysadmins', action="store_true", help="Do not hunt for sysadmins stuff (mRemoteNG, vnc, keepass, lastpass ...)", default=False)
 	group.add_argument('--from_file', action='store', help='Give me the export of ADSyncQuery.exe ADSync.mdf to decrypt ADConnect password', default='adsync_export')
 
 	if len(sys.argv)==1:
