@@ -85,6 +85,7 @@ class MySeatBelt:
 			if self.create_conn_obj():
 				#self.do_info_rpc_unauth()
 				self.do_info_unauth()
+				self.create_conn_obj()
 				if self.login_conn():
 					self.is_admin()
 					if self.admin_privs:
