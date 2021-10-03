@@ -1,5 +1,5 @@
 #%UserProfile%\AppData\Local\Google\Chrome\User Data\Default\databases\chrome-extension_hdokiejnpimakedhajhdlcegeplioahd_0
-'''
+r'''
 https://www.slideshare.net/martinvigo/breaking-vaults-stealing-lastpass-protected-secrets
 
 Windows data storage

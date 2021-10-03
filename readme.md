@@ -4,12 +4,12 @@ Dumping revelant information on compromised targets without AV detection
 ## DPAPI dumping
 Lots of credentials are protected by [DPAPI](https://docs.microsoft.com/en-us/dotnet/standard/security/how-to-use-data-protection).
 
-We aim at locating those "secured" credentials, and retreive them using :
+We aim at locating those "secured" credentials, and retrieve them using :
 - User password
 - Domaine DPAPI BackupKey
 - Local machine DPAPI Key (protecting `TaskScheduled` blob)
 
-## Curently gathered info
+## Currently gathered info
 - Windows credentials (Taskscheduled credentials & a lot more)
 - Windows Vaults
 - Windows RDP credentials 
@@ -31,7 +31,7 @@ With local admin account on a host, we can :
 - Gather machine protected DPAPI secrets
   - ScheduledTask that will contain cleartext login/password of the account configured to run the task
   - Wi-Fi passwords
-- Extract Masterkey's hash value for every user profiles (masterkeys beeing protected by the user's password, let's try to crack them with Hashcat)
+- Extract Masterkey's hash value for every user profiles (masterkeys being protected by the user's password, let's try to crack them with Hashcat)
 - Identify who is connected from where, in order to identify admin's personal computers. 
 - Extract other non-dpapi protected secrets (VNC/Firefox/mRemoteNG)
 - Gather protected secrets from IE, Chrome, Firefox and start reaching the Azure tenant.
