@@ -102,7 +102,7 @@ class lastpass():
                 masterkey = self.get_masterkey(user=user, guid=guid, type='DOMAIN')
                 if masterkey != None:
                     if masterkey['status'] == 'decrypted':
-                        mydpapi.options.key = masterkey['key'].
+                        mydpapi.options.key = masterkey['key']
                         cred_data = mydpapi.decrypt_blob(entropy=string_to_bin('DE135B5F18A34670B2572429698898E6'))
                         if cred_data != None:
                             self.logging.debug(
