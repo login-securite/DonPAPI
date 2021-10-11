@@ -10,6 +10,7 @@ Opera – Run %AppData% then go to AppData\Local\Opera Software\Opera Stable\Cac
 '''
 import ntpath
 import LnkParse3
+from impacket import ntlm
 from lib.toolbox import bcolors
 from lib.fileops import MyFileOps
 
