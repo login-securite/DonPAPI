@@ -25,6 +25,7 @@ import codecs
 import sys
 from Cryptodome import Random
 from Cryptodome.Cipher import AES
+from lib.secretsdump import _print_helper
 
 def unpad(s):
     return s[:-ord(s[len(s)-1:])]
