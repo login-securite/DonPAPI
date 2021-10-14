@@ -1,5 +1,7 @@
 # DonPAPI
 Dumping revelant information on compromised targets without AV detection
+![alt text](https://github.com/login-securite/DonPAPI/blob/main/res/Logo%20DonPapi.png)
+
 
 ## DPAPI dumping
 Lots of credentials are protected by [DPAPI](https://docs.microsoft.com/en-us/dotnet/standard/security/how-to-use-data-protection).
