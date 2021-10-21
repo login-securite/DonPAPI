@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "donpapi"
+version = "1.0.0"
+description = "Dumping revelant information on compromised targets without AV detection"
+authors = ["login-securite"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+impacket = "^0.9.23"
+pyasn = "^1.6.1"
+LnkParse3 = "^1.2.0"
+wheel = "^0.37.0"
+M2Crypto = "^0.38.0"
+pycryptodome = "^3.11.0"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
