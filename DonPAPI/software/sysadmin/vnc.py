@@ -39,26 +39,15 @@ class Vnc():
                 f"[{self.options.target_ip}] exception in do_crypt")
             self.logging.debug(ex)
 
-    def unhex(self, s):
-        try:
-            s = codecs.decode(s, 'hex')
-        except TypeError as e:
-            if e.message == 'Odd-length string':
-                self.logging.debug('%s . Chopping last char off... "%s"' % (e.message, s[:-1]))
-                s = codecs.decode(s[:-1], 'hex')
-            else:
-                return False
-        return s
-
     def reverse_vncpassword(self, hash):
         try:
-            encpasswd = self.unhex(hash)
+            encpasswd = hash.hex()
             pwd = None
             if encpasswd:
                 # If the hex encoded passwd length is longer than 16 hex chars and divisible
                 # by 16, then we chop the passwd into blocks of 64 bits (16 hex chars)
                 # (1 hex char = 4 binary bits = 1 nibble)
-                hexpasswd = codecs.encode(encpasswd, 'hex')
+                hexpasswd = bytes.fromhex(encpasswd)
                 if len(hexpasswd) > 16 and (len(hexpasswd) % 16) == 0:
                     splitstr = self.split_len(codecs.encode(hash, 'hex'), 16)
                     cryptedblocks = []
@@ -66,9 +55,9 @@ class Vnc():
                         cryptedblocks.append(self.do_crypt(codecs.decode(sblock, 'hex'), True))
                         pwd = b''.join(cryptedblocks)
                 elif len(hexpasswd) <= 16:
-                    pwd = self.do_crypt(encpasswd, True)
+                    pwd = self.do_crypt(hash, True)
                 else:
-                    pwd = self.do_crypt(encpasswd, True)
+                    pwd = self.do_crypt(hash, True)
         except Exception as ex:
             self.logging.debug(f"Exception reverse_vncpassword {hash} ")
             self.logging.debug(ex)
@@ -104,7 +93,7 @@ class Vnc():
                 continue
 
             try:
-                enc_pwd = myvalue.rstrip('\x00')
+                enc_pwd = myvalue.rstrip(b'\x00')
                 self.logging.debug(f"[{self.options.target_ip}] Found VNC {vnc[0]} encoded password in reg {enc_pwd}")
                 # enc_pwd=myvalue
             except Exception as ex:

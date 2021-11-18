@@ -1087,13 +1087,26 @@ class database:
 			#return None
 		try:
 			if pillaged_from_userid == None :
-				query = f"SELECT * FROM credz WHERE LOWER(username)=LOWER('{credz_username}') AND LOWER(password)=LOWER('{credz_password}') AND LOWER(type)=LOWER('{credz_type}') AND LOWER(target)=LOWER('{credz_target}') AND pillaged_from_computerid={pillaged_from_computerid}"
+				query = "SELECT * FROM credz WHERE LOWER(username)=LOWER(:credz_username) AND LOWER(password)=LOWER(:credz_password) AND LOWER(type)=LOWER(:credz_type) AND LOWER(target)=LOWER(:credz_target) AND pillaged_from_computerid=:pillaged_from_computerid"
+				parameters = {
+					"credz_username": credz_username,
+					"credz_password": credz_password,
+					"credz_type": credz_type, "credz_target": credz_target,
+					"pillaged_from_computerid": int(pillaged_from_computerid),
+				}
 			else:
-				query=f"SELECT * FROM credz WHERE LOWER(username)=LOWER('{credz_username}') AND LOWER(password)=LOWER('{credz_password}') AND LOWER(type)=LOWER('{credz_type}') AND LOWER(target)=LOWER('{credz_target}') AND pillaged_from_computerid={pillaged_from_computerid} AND pillaged_from_userid={pillaged_from_userid}"
+				query = "SELECT * FROM credz WHERE LOWER(username)=LOWER(:credz_username) AND LOWER(password)=LOWER(:credz_password) AND LOWER(type)=LOWER(:credz_type) AND LOWER(target)=LOWER(:credz_target) AND pillaged_from_computerid=:pillaged_from_computerid AND pillaged_from_userid=:pillaged_from_userid"
+				parameters = {
+					"credz_username": credz_username,
+					"credz_password": credz_password,
+					"credz_type": credz_type, "credz_target": credz_target,
+					"pillaged_from_computerid": int(pillaged_from_computerid),
+					"pillaged_from_userid": int(pillaged_from_userid)
+				}
 			self.logging.debug(query)
 			with self.conn:
 				cur = self.conn.cursor()
-				cur.execute(query)
+				cur.execute(query, parameters)
 			results = cur.fetchall()
 		except Exception as ex:
 			self.logging.error(f"Exception in add_credz 3")
@@ -1101,13 +1114,30 @@ class database:
 		try:
 			if not len(results):
 				if pillaged_from_userid == None:
-					query = f"INSERT INTO credz (username, password, target, type, pillaged_from_computerid, file_path) VALUES ('{credz_username}', '{credz_password}', '{credz_target}', '{credz_type}', {pillaged_from_computerid}, '{credz_path}')"
+					query = "INSERT INTO credz (username, password, target, type, pillaged_from_computerid, file_path) VALUES (:credz_username, :credz_password, :credz_target, :credz_type, :pillaged_from_computerid, :credz_path)"
+					parameters = {
+						"credz_username": credz_username,
+						"credz_password": credz_password,
+						"credz_target": credz_target,
+						"credz_type": credz_type,
+						"pillaged_from_computerid": int(pillaged_from_computerid),
+						"credz_path": credz_path,
+					}
 				else:
-					query=f"INSERT INTO credz (username, password, target, type, pillaged_from_computerid,pillaged_from_userid, file_path) VALUES ('{credz_username}', '{credz_password}', '{credz_target}', '{credz_type}', {pillaged_from_computerid}, {pillaged_from_userid}, '{credz_path}')"
+					query = "INSERT INTO credz (username, password, target, type, pillaged_from_computerid,pillaged_from_userid, file_path) VALUES (:credz_username, :credz_password, :credz_target, :credz_type, :pillaged_from_computerid, :pillaged_from_userid, :credz_path)"
+					parameters = {
+						"credz_username": credz_username,
+						"credz_password": credz_password,
+						"credz_type": credz_type,
+						"credz_target": credz_target,
+						"pillaged_from_computerid": int(pillaged_from_computerid),
+						"pillaged_from_userid": int(pillaged_from_userid),
+						"credz_path": credz_path,
+					}
 				self.logging.debug(query)
 				with self.conn:
 					cur = self.conn.cursor()
-					cur.execute(query)
+					cur.execute(query, parameters)
 				user_rowid = cur.lastrowid
 				self.logging.debug(
 					f'added_credential(credtype={credz_type}, target={credz_target}, username={credz_username}, password={credz_password}) => {user_rowid}')

