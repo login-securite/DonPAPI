@@ -16,10 +16,6 @@ testpublish: clean
 	python3.7 setup.py sdist bdist_wheel
 	python3.7 -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
-package: clean
-	python setup.py install
-	pyinstaller ./lsassy/console.py --onefile --clean -n lsassy --additional-hooks-dir=hooks
-
 rebuild: clean
 	python3.7 setup.py install
 
