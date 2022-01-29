@@ -268,15 +268,21 @@ class DPAPI:
 
 			decryptedKey = cipher.decrypt(dk['SecretData'][::-1], None)
 			if decryptedKey:
-				domain_master_key = DPAPI_DOMAIN_RSA_MASTER_KEY(decryptedKey)
-				key = domain_master_key['buffer'][:domain_master_key['cbMasterKey']]
-				self.logging.debug('Decrypted key with domain backup key provided')
-				self.logging.debug('Decrypted key: 0x%s' % hexlify(key).decode('latin-1'))
-				return '0x%s' % hexlify(key).decode('latin-1')
+				try:
+					domain_master_key = DPAPI_DOMAIN_RSA_MASTER_KEY(decryptedKey)
+					key = domain_master_key['buffer'][:domain_master_key['cbMasterKey']]
+					self.logging.debug('Decrypted key with domain backup key provided')
+					self.logging.debug('Decrypted key: 0x%s' % hexlify(key).decode('latin-1'))
+					return '0x%s' % hexlify(key).decode('latin-1')
+				except:  # on extrait l'info en dur
+					self.logging.debug('excepted, maybe because of a known DPAPI_PVK fuckup. trying to adjust ... ')
+					key = decryptedKey[8:96 + 8 - 32]
+					self.logging.debug('Decrypted key: 0x%s' % hexlify(key).decode('latin-1'))
+					return '0x%s' % hexlify(key).decode('latin-1')
 			else:
 				logging.debug("Error in decryptedKey with PVK")
-				#Lets try to decrypt it with another method
-				#return -1
+		# Lets try to decrypt it with another method
+		# return -1
 		if self.options.key and self.options.sid: #LSA machine/user Key + SID
 			self.logging.debug("Decrypting with SID and key")
 			key = unhexlify(self.options.key[2:])
