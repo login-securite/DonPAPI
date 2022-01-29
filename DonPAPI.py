@@ -115,6 +115,8 @@ def main():
 		options.password = options.password + '@' + options.address.rpartition('@')[0]
 		options.address = options.address.rpartition('@')[2]
 
+	options.username=options.username.lower() #for easier compare
+
 	if options.target_ip is None:
 		options.target_ip = options.address
 	if options.domain is None:
@@ -142,7 +144,9 @@ def main():
 				file_data = f.read().replace(b'\x0d', b'').split(b'\n')
 				for cred in file_data:
 					if b':' in cred:
-						tmp_username, tmp_password = cred.split(b':')
+						tmp_split = cred.split(b':')
+						tmp_username = tmp_split[0].lower() #Make all usernames lower for easier compare
+						tmp_password = b''.join(tmp_split[1:])
 						#Add "history password to account pass to test
 						if b'_history' in tmp_username:
 							tmp_username=tmp_username[:tmp_username.index(b'_history')]
