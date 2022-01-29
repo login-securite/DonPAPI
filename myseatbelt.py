@@ -1244,16 +1244,18 @@ class MySeatBelt:
 					vault_name = secret_file['vault_name']#args[0]
 					vault_type = secret_file['vault_type']#args[1]
 					self.logging.debug(f"Processing Vault {vault_name} - type : {vault_type} ")
-					print(vault_type)
 					if vault_type == 'WinBio Key':
 						data = self.dump_VAULT_WIN_BIO_KEY(user,localfile,data)
+						self.logsecret(f"Vault {vault_name} : {data} ")
 					elif vault_type == 'NGC Local Account Logon Vault Credential':
 						data = self.dump_VAULT_NGC_LOCAL_ACCOOUNT(user,localfile,data)
+						self.logsecret(f"Vault {vault_name} : {data} ")
 					elif "NGC" in vault_type :
 						data = self.dump_VAULT_NGC_ACCOOUNT(user,localfile,data)
+						self.logsecret(f"Vault {vault_name} : {data} ")
 					elif vault_type == 'Internet Explorer':
 						data = self.dump_VAULT_INTERNET_EXPLORER(user,localfile,data)
-					self.logsecret(f"Vault {vault_name} : {data} ")
+
 					#user.secrets["Vault:%s" % vault_name] = data
 					secret_file['secret'] = data
 					self.dump_to_file(localfile, data)
@@ -1280,6 +1282,7 @@ class MySeatBelt:
 							  credz_path=localfile,
 							  pillaged_from_computer_ip=self.options.target_ip,
 							  pillaged_from_username=user.username)
+			self.logging.info(f"[{self.options.target_ip}] [+] {bcolors.OKGREEN} [IE/EDGE Password] {bcolors.ENDC} for {vault_blob['Resource'].decode('utf-16le')} [ {bcolors.OKBLUE}{vault_blob['Username'].decode('utf-16le')} : {vault_blob['Password'].decode('utf-16le')}{bcolors.ENDC} ]")
 			return retval
 		except Exception as ex:
 			self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception dump_VAULT_INTERNET_EXPLORER{bcolors.ENDC}")
