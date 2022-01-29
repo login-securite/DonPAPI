@@ -199,7 +199,7 @@ class MySeatBelt:
 			else:
 				if self.options.laps is True and username != '' and password != '':  # not doing LAPS for null session
 					if(self.get_laps()):
-						for username in ['Administrator','Administrateur','Administrador']:
+						for username in ['administrator','administrateur','administrador']:
 							try:
 								self.logging.debug(f"[{self.options.target_ip}] [-] initialising smb Local Authentification to {self.options.domain} / {username} : {self.options.password}, @ {self.host} , Hash : {self.options.lmhash} : {self.options.nthash}, AESKey {self.options.aesKey}")
 								self.smb.login(username, self.options.password, self.options.domain, self.options.lmhash, self.options.nthash, ntlmFallback=True)
@@ -1705,8 +1705,8 @@ class MySeatBelt:
 			if len(self.options.credz) > 0 and user.masterkeys_file[guid]['status'] != 'decrypted': #localfile not in user.masterkeys:
 				self.logging.debug(f"[{self.options.target_ip}] [...] Testing decoding {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Masterkey {guid} with credz")
 				for username in self.options.credz:
-					if username in user.username :#pour fonctionner aussi avec le .domain ou les sessions multiple citrix en user.domain.001 ?
-						self.logging.debug(f"[{self.options.target_ip}] [...] Testing {len(self.options.credz[user.username])} credz for user {user.username}")
+					if username.lower() in user.username.lower() :#pour fonctionner aussi avec le .domain ou les sessions multiple citrix en user.domain.001 ?
+						#self.logging.debug(f"[{self.options.target_ip}] [...] Testing {len(self.options.credz[username])} credz for user {user.username}")
 						#for test_cred in self.options.credz[user.username]:
 						try:
 							self.logging.debug(f"[{self.options.target_ip}]Trying to decrypt {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Masterkey {guid} with user SID {user.sid} and {len(self.options.credz[username])}credential(s) from credz file")
