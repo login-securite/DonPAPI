@@ -1,6 +1,6 @@
 import logging
 import binascii,os,json,datetime,shutil,base64
-from datetime import date
+from datetime import date,datetime,timedelta
 from lib.toolbox import bcolors
 
 
@@ -76,15 +76,16 @@ class reporting:
 			<html>
 			<head>
 			  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-			  <title>MySeatBelt - Result for %s</title>	
+			  <title>DonPapi - Result for %s</title>	
 			</head>
-			<body>\n""" % ('res/style.css', "[client_name]")
+			<body onload="toggleAll()">
+			\n""" % ('res/style.css', "[client_name]")
 		self.add_to_resultpage(data)
 
 		# Tableau en top de page pour les liens ?
 		data = """<table class="statistics"><TR><Th><a class="firstletter">M</a><a>enu</A></Th></TR>\n"""
 		data = """<div class="navbar">\n"""
-		for menu in ['wifi', 'taskscheduler', 'credential-blob', 'browser-internet_explorer', 'SAM', 'LSA', 'DCC2',
+		for menu in ['wifi', 'taskscheduler', 'credential-blob', 'browser-internet_explorer', 'cookies', 'SAM', 'LSA', 'DCC2',
 		             'Files', 'Connected-users', 'Local_account_reuse', 'Scope_Audited']:
 			# data += f"""<TR><TD class="menu_top"><BR><a href="#{menu}"> {menu} </A><BR></TD></TR>\n"""
 			data += f"""<a href="#{menu}"> {menu.upper()}</A>\n"""
@@ -95,7 +96,7 @@ class reporting:
 		data = """<DIV class="main">\n"""
 		data += """<table class="main"><TR><TD>\n"""
 
-		data += """<table><TR><TD class="menu_top"><a class="firstletter">P</a><a>assword Audit - %s</a></TD></TR>\n""" % '[client_name]'.upper()
+		data += """<table><TR><TD class="menu_top"><a class="firstletter">D</a><a>onPapi Audit</a></TD></TR>\n"""
 		data += """<TR><TD class="menu_top"><BR> %s <BR></TD></TR></TABLE><BR>\n""" % date.today().strftime("%d/%m/%Y")
 
 		data += """<table><TR><TD><img class="logo_left" src='%s'></TD>""" % os.path.join('res','Logo_LOGIN.PNG')
@@ -128,13 +129,29 @@ class reporting:
 		  }
 		 }
 		}
+		
+		function toggleAll() {
+		toggle_it("cookies");
+		toggle_it("wifi");
+		toggle_it("taskscheduler");
+		toggle_it("credential-blob");
+		toggle_it("browser-internet_explorer");
+		toggle_it("browser-firefox");
+		toggle_it("browser-chrome");
+		toggle_it("SAM");
+		toggle_it("LSA");
+		toggle_it("DCC2");
+		toggle_it("VNC");
+		toggle_it("MRemoteNG");
+		}
   		</script>
 		"""
 		self.add_to_resultpage(data)
 
 		results = self.get_credz()
 
-		data = """<table class="statistics"><TR><Th><a class="firstletter">U</a><a>sername</A></Th>
+		data = """<table class="statistics"><TR>
+		<Th><a class="firstletter">U</a><a>sername</A></Th>
 		<Th><a class="firstletter">P</a><a>assword</A></Th>
 		<Th><a class="firstletter">T</a><a>arget</A></Th>
 		<Th><a class="firstletter">T</a><a>ype</A></Th>
@@ -147,7 +164,8 @@ class reporting:
 			cred_id, file_path, username, password, target, type, pillaged_from_computerid, pillaged_from_userid = cred
 			if type != current_type:
 				current_type=type
-				data += f"""<TR id={current_type}><TD colspan="6" class="toggle_menu" onClick="toggle_it('{current_type}')"><A>{current_type}</A></TD></TR>"""
+				current_type_count=self.get_credz_count(current_type)[0][0]
+				data += f"""<TR id={current_type}><TD colspan="6" class="toggle_menu" onClick="toggle_it('{current_type}')"><A>{current_type} ({current_type_count})</A></TD></TR>"""
 
 
 			#Skip infos of
@@ -233,6 +251,72 @@ class reporting:
 		data += """</TABLE><BR>"""
 		self.add_to_resultpage(data)
 		###
+		##### List cookies
+		results = self.get_cookies()
+
+		data = """<table class="statistics"><TR>
+				<Th><a class="firstletter">N</a><a>ame</A></Th>
+				<Th><a class="firstletter">V</a><a>alue</A></Th>
+				<Th><a class="firstletter">U</a><a>ntil</A></Th>
+				<Th><a class="firstletter">T</a><a>arget</A></Th>
+				<Th><a class="firstletter">P</a><a>illaged_from_computerid</A></Th>
+				<Th><a class="firstletter">P</a><a>illaged_from_userid</A></Th></TR>\n"""
+
+		# <a href="#" id="toggle" onClick="toggle_it('tr1');toggle_it('tr2')">
+		current_type = 'cookies'
+		data += f"""<TR id=cookies><TD colspan="6" class="toggle_menu" onClick="toggle_it('cookies')"><A>Cookies ({len(results)})</A></TD></TR>"""
+		for index, cred in enumerate(results):
+			name,value,expires_utc,target,type,pillaged_from_computerid,pillaged_from_userid = cred
+			# Skip infos of
+			# Get computer infos
+			res = self.get_computer_infos(pillaged_from_computerid)
+			for index_, res2 in enumerate(res):
+				ip, hostname = res2
+			computer_info = f"{ip} | {hostname}"
+			# pillaged_from_userid
+			if pillaged_from_userid != None:
+				res = self.get_user_infos(pillaged_from_userid)
+				for index_, pillaged_username in enumerate(res):
+					pillaged_from_userid = pillaged_username[0]
+			else:
+				pillaged_from_userid = str(pillaged_from_userid)
+
+			if index % 2 == 0:
+				data += f"""<TR class=tableau_resultat_row0 {current_type}=1>"""
+			else:
+				data += f"""<TR class=tableau_resultat_row1 {current_type}=1>"""
+
+			special_style = ""
+
+			###Print block
+			for info in [name,value]:
+				data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
+			for info in [expires_utc]:
+				data += f"""<TD {special_style} ><A title="{info}"> {(datetime(1601, 1, 1) + timedelta(microseconds=info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
+
+			# check if info contains a URL
+			if 'http:' in target or 'https:' in target:
+				info2 = target[target.index('http'):]
+				special_ref = f'''href="{info2}" target="_blank" title="{target}"'''
+			elif 'ftp:' in target:
+				info2 = target[target.index('ftp'):]
+				special_ref = f'''href="{info2}" target="_blank" title="{target}"'''
+			elif "Domain:target=" in target:
+				info2 = f'''rdp://full%20address=s:{target[target.index('Domain:target=') + len('Domain:target='):]}:3389&username=s:{username}&audiomode=i:2&disable%20themes=i:1'''
+				special_ref = f'''href="{info2}" title="{target}"'''
+			elif "LegacyGeneric:target=MicrosoftOffice1" in target:
+				target = f'''{target[target.index('LegacyGeneric:target=') + len('LegacyGeneric:target='):]}'''
+				special_ref = f'''href="https://login.microsoftonline.com/" target="_blank" title="OfficeLogin"'''
+			else:
+				special_ref = f'''title="{target}"'''
+			data += f"""<TD {special_style} ><A {special_ref}> {str(target)[:48]} </A></TD>"""
+
+			for info in [type, computer_info, pillaged_from_userid]:
+				data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
+			data += """</TR>\n"""
+
+		data += """</TABLE><BR>"""
+		self.add_to_resultpage(data)
 		##### List gathered files
 		results = self.get_file()
 
@@ -445,6 +529,13 @@ class reporting:
 				self.logging.debug(ex)
 		self.logging.debug(f"Export Done!")
 
+	def get_credz_count(self,current_type):
+		with self.conn:
+			cur = self.conn.cursor()
+			cur.execute(f"SELECT count(id) FROM credz WHERE LOWER(type)=LOWER('{current_type}')")
+			results = cur.fetchall()
+		return results
+
 	def get_credz(self, filterTerm=None, credz_type=None):
 		"""
 		Return credentials from the database.
@@ -543,6 +634,12 @@ class reporting:
 			results = cur.fetchall()
 		return results
 
+	def get_cookies(self):
+		with self.conn:
+			cur = self.conn.cursor()
+			cur.execute(f"SELECT name,value,expires_utc,target,type,pillaged_from_computerid,pillaged_from_userid  FROM cookies ORDER BY pillaged_from_computerid ASC, expires_utc DESC ")
+			results = cur.fetchall()
+		return results
 class database:
 
 	def __init__(self, conn,logger):
