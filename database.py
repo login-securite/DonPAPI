@@ -627,6 +627,19 @@ class database:
 					FOREIGN KEY(pillaged_from_computerid) REFERENCES computers(id),
 					FOREIGN KEY(pillaged_from_userid) REFERENCES users(id)
 					)''')
+		db_conn.execute('''CREATE TABLE "cookies" (
+					"id" integer PRIMARY KEY,
+					"file_path" text,
+					"name" text,
+					"value" text,
+					"expires_utc" int,
+					"target" text,
+					"type" text,
+					"pillaged_from_computerid" integer,
+					"pillaged_from_userid" integer,
+					FOREIGN KEY(pillaged_from_computerid) REFERENCES computers(id),
+					FOREIGN KEY(pillaged_from_userid) REFERENCES users(id)
+					)''')
 		db_conn.execute('''CREATE TABLE "dpapi_hash" (
 							"id" integer PRIMARY KEY,
 							"file_path" text,
@@ -1024,6 +1037,8 @@ class database:
 		return user_rowid
 
 	def clear_input(self,data):
+		if isinstance(data,int):
+			return data
 		if data is None:
 			data = ''
 		result = data.replace('\x00','')
@@ -1139,6 +1154,126 @@ class database:
 
 		except Exception as ex:
 			self.logging.error(f"Exception in add_credz 4")
+			self.logging.debug(ex)
+
+		return None
+
+	def add_cookies(self, credz_type, credz_name, credz_value,credz_expires_utc, credz_target, credz_path , pillaged_from_computerid=None,pillaged_from_userid=None,pillaged_from_computer_ip=None,pillaged_from_username=None):
+		"""
+		Check if this credential has already been added to the database, if not add it in.
+		"""
+		user_rowid=None
+		try:
+			credz_name=self.clear_input(credz_name)
+			self.logging.debug(f"{credz_name} - {binascii.hexlify(credz_name.encode('utf-8'))}")
+			credz_value = self.clear_input(credz_value)
+			self.logging.debug(f"{credz_value} - {binascii.hexlify(credz_value.encode('utf-8'))}")
+			credz_expires_utc = self.clear_input(credz_expires_utc)
+			self.logging.debug(f"{credz_expires_utc}")
+			credz_target = self.clear_input(credz_target)
+			self.logging.debug(f"{credz_target} - {binascii.hexlify(credz_target.encode('utf-8'))}")
+			credz_path = self.clear_input(credz_path)
+			self.logging.debug(f"{credz_path} - {binascii.hexlify(credz_path.encode('utf-8'))}")
+			self.logging.debug(f"pillaged_from_computer_ip {pillaged_from_computer_ip} - {binascii.hexlify(pillaged_from_computer_ip.encode('utf-8'))}")
+			self.logging.debug(f"pillaged_from_username {pillaged_from_username}")
+
+
+			if pillaged_from_computer_ip != None:
+				with self.conn:
+					cur = self.conn.cursor()
+					cur.execute(f"SELECT * FROM computers WHERE LOWER(ip)=LOWER('{pillaged_from_computer_ip}')")
+				results = cur.fetchall()
+				if len(results)>0:
+					result=results[0]
+					pillaged_from_computerid=result[0]
+					self.logging.debug(f"[+] Resolved {pillaged_from_computer_ip} to id : {pillaged_from_computerid}")
+		except Exception as ex:
+			self.logging.error(f"Exception in add_cookie 1")
+			self.logging.debug(ex)
+
+		try:
+			if pillaged_from_username != None:
+				with self.conn:
+					cur = self.conn.cursor()
+					cur.execute(f"SELECT * FROM users WHERE LOWER(username)=LOWER('{pillaged_from_username}') AND pillaged_from_computerid={pillaged_from_computerid}")
+				results = cur.fetchall()
+				if len(results) > 0:
+					result = results[0]
+					pillaged_from_userid = result[0]
+					self.logging.debug(f"[+] Resolved {pillaged_from_username} on machine {pillaged_from_computerid} to id : {pillaged_from_userid}")
+		except Exception as ex:
+			self.logging.error(f"Exception in add_cookies 2")
+			self.logging.debug(ex)
+			pass
+		if pillaged_from_computerid == None or pillaged_from_userid == None :
+			self.logging.debug(f"[-] Missing computerId or UserId to register Cookie {credz_name} {credz_value} - {credz_target}")
+			#return None
+		try:
+			if pillaged_from_userid == None :
+				query = "SELECT * FROM cookies WHERE LOWER(name)=LOWER(:credz_name) AND LOWER(value)=LOWER(:credz_value) AND expires_utc=:credz_expires_utc AND LOWER(type)=LOWER(:credz_type) AND LOWER(target)=LOWER(:credz_target) AND pillaged_from_computerid=:pillaged_from_computerid"
+				parameters = {
+					"credz_name": credz_name,
+					"credz_value": credz_value,
+					"credz_expires_utc": credz_expires_utc,
+					"credz_type": credz_type, "credz_target": credz_target,
+					"pillaged_from_computerid": int(pillaged_from_computerid),
+				}
+			else:
+				query = "SELECT * FROM cookies WHERE LOWER(name)=LOWER(:credz_name) AND LOWER(value)=LOWER(:credz_value) AND expires_utc=:credz_expires_utc AND LOWER(type)=LOWER(:credz_type) AND LOWER(target)=LOWER(:credz_target) AND pillaged_from_computerid=:pillaged_from_computerid AND pillaged_from_userid=:pillaged_from_userid"
+				parameters = {
+					"credz_name": credz_name,
+					"credz_value": credz_value,
+					"credz_expires_utc": credz_expires_utc,
+					"credz_type": credz_type, "credz_target": credz_target,
+					"pillaged_from_computerid": int(pillaged_from_computerid),
+					"pillaged_from_userid": int(pillaged_from_userid)
+				}
+			self.logging.debug(query)
+			with self.conn:
+				cur = self.conn.cursor()
+				cur.execute(query, parameters)
+			results = cur.fetchall()
+		except Exception as ex:
+			self.logging.error(f"Exception in add_cookie 3")
+			self.logging.debug(ex)
+		try:
+			if not len(results):
+				if pillaged_from_userid == None:
+					query = "INSERT INTO cookies (name, value, expires_utc, target, type, pillaged_from_computerid, file_path) VALUES (:credz_name, :credz_value, :credz_expires_utc, :credz_target, :credz_type, :pillaged_from_computerid, :credz_path)"
+					parameters = {
+						"credz_name": credz_name,
+						"credz_value": credz_value,
+						"credz_expires_utc": credz_expires_utc,
+						"credz_target": credz_target,
+						"credz_type": credz_type,
+						"pillaged_from_computerid": int(pillaged_from_computerid),
+						"credz_path": credz_path,
+					}
+				else:
+					query = "INSERT INTO cookies (name, value, expires_utc, target, type, pillaged_from_computerid,pillaged_from_userid, file_path) VALUES (:credz_name, :credz_value, :credz_expires_utc, :credz_target, :credz_type, :pillaged_from_computerid, :pillaged_from_userid, :credz_path)"
+					parameters = {
+						"credz_name": credz_name,
+						"credz_value": credz_value,
+						"credz_expires_utc": credz_expires_utc,
+						"credz_type": credz_type,
+						"credz_target": credz_target,
+						"pillaged_from_computerid": int(pillaged_from_computerid),
+						"pillaged_from_userid": int(pillaged_from_userid),
+						"credz_path": credz_path,
+					}
+				self.logging.debug(query)
+				with self.conn:
+					cur = self.conn.cursor()
+					cur.execute(query, parameters)
+				user_rowid = cur.lastrowid
+				self.logging.debug(
+					f'added_cookies(credtype={credz_type}, target={credz_target}, name={credz_name}, value={credz_value}) => {user_rowid}')
+			else:
+				self.logging.debug(
+					f'added_credential(credtype={credz_type}, target={credz_target}, name={credz_name}, value={credz_value}) => ALREADY IN DB')
+
+		except Exception as ex:
+			self.logging.error(f"Exception in add_cookie 4")
 			self.logging.debug(ex)
 
 		return None

