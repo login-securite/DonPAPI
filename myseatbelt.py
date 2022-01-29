@@ -458,17 +458,19 @@ class MySeatBelt:
 										self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypting logindata for CHROME {user.username} {localfile} {bcolors.ENDC}")
 										self.logging.debug(ex)
 							if my_blob_type == 'ChromeCookies':
-								"""
-								myChromeSecrets.cookie_path=localfile
-								user.files[longname] = {}
-								user.files[longname]['type'] = my_blob_type
-								user.files[longname]['status'] = 'encrypted'
-								user.files[longname]['path'] = localfile
-								cookies=myChromeSecrets.decrypt_chrome_CookieData()
-								user.files[longname]['secret'] = cookies
-								if cookies is not None:
-									user.files[longname]['status'] = 'decrypted'
-								"""
+								try:
+									myChromeSecrets.cookie_path=localfile
+									user.files[longname] = {}
+									user.files[longname]['type'] = my_blob_type
+									user.files[longname]['status'] = 'encrypted'
+									user.files[longname]['path'] = localfile
+									cookies=myChromeSecrets.decrypt_chrome_CookieData()
+									user.files[longname]['secret'] = cookies
+									if cookies is not None:
+										user.files[longname]['status'] = 'decrypted'
+								except Exception as ex:
+										self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypting CookieData for CHROME {user.username} {localfile} {bcolors.ENDC}")
+										self.logging.debug(ex)
 
 						except Exception as ex:
 							self.logging.debug(
