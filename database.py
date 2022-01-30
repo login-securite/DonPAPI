@@ -552,6 +552,23 @@ class reporting:
 				self.logging.debug(ex)
 		self.logging.debug(f"Export Done!")
 
+	def export_sam(self):
+		user_credz=self.get_credz(distinct_sam=True)
+		filename = os.path.join(self.options.output_directory, 'raw_sam')
+		self.logging.info(f"Exporting {len(user_credz)} NTLM credz to {self.options.output_directory}")
+		if os.path.exists(filename):
+			os.remove(filename)
+		for index, cred in enumerate(user_credz):
+			username, password = cred
+			try:
+				f=open(filename,'ab')
+				f.write(f"{username}:{password}\n".encode('utf-8'))
+				f.close()
+			except Exception as ex:
+				self.logging.error(f"Exception in export raw sam to {filename}")
+				self.logging.debug(ex)
+		self.logging.debug(f"Export Done!")
+
 	def export_cookies(self):
 		user_credz=self.get_cookies()
 		filename = os.path.join(self.options.output_directory, 'raw_cookies')
@@ -576,7 +593,7 @@ class reporting:
 			results = cur.fetchall()
 		return results
 
-	def get_credz(self, filterTerm=None, credz_type=None,distinct=False):
+	def get_credz(self, filterTerm=None, credz_type=None,distinct=False,distinct_sam=False):
 		"""
 		Return credentials from the database.
 		"""
@@ -594,6 +611,10 @@ class reporting:
 			with self.conn:
 				cur = self.conn.cursor()
 				cur.execute("SELECT DISTINCT username,password FROM credz WHERE LOWER(type) NOT IN ('sam','lsa','dcc2') AND password NOT IN ('')")
+		elif distinct_sam :
+			with self.conn:
+				cur = self.conn.cursor()
+				cur.execute("SELECT DISTINCT username,password FROM credz WHERE LOWER(type) IN ('sam') AND password NOT IN ('')")
 		# otherwise return all credentials
 		else:
 			with self.conn:
