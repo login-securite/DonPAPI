@@ -17,9 +17,9 @@ We aim at locating those "secured" credentials, and retrieve them using :
 - Windows RDP credentials 
 - AdConnect (still require a manual operation)
 - Wifi key
-- Intenet explorer Creentials
-- Chrome cookies & credentials
-- Firefox cookies & credentials 
+- Intenet explorer Credentials
+- Chrome cookies & credentials & cookies
+- Firefox cookies & credentials & cookies
 - VNC passwords
 - mRemoteNG password (with default config)
 
