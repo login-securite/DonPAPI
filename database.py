@@ -164,7 +164,7 @@ class reporting:
 			cred_id, file_path, username, password, target, type, pillaged_from_computerid, pillaged_from_userid = cred
 			if type != current_type:
 				current_type=type
-				current_type_count=self.get_credz_count(current_type)[0][0]
+				current_type_count=self.get_credz_count(current_type,'AND username NOT IN ("NL$KM_history") AND target NOT IN ("WindowsLive:target=virtualapp/didlogical","Adobe App Info","Adobe App Prefetched Info","Adobe User Info","Adobe User OS Info","MicrosoftOffice16_Data:ADAL","LegacyGeneric:target=msteams_adalsso/adal_contex")')[0][0]
 				data += f"""<TR id={current_type}><TD colspan="6" class="toggle_menu" onClick="toggle_it('{current_type}')"><A>{current_type} ({current_type_count})</A></TD></TR>"""
 
 
@@ -251,6 +251,8 @@ class reporting:
 		data += """</TABLE><BR>"""
 		self.add_to_resultpage(data)
 		###
+
+
 		##### List cookies
 		results = self.get_cookies()
 
@@ -259,12 +261,13 @@ class reporting:
 				<Th><a class="firstletter">V</a><a>alue</A></Th>
 				<Th><a class="firstletter">U</a><a>ntil</A></Th>
 				<Th><a class="firstletter">T</a><a>arget</A></Th>
+				<Th><a class="firstletter">T</a><a>ype</A></Th>
 				<Th><a class="firstletter">P</a><a>illaged_from_computerid</A></Th>
 				<Th><a class="firstletter">P</a><a>illaged_from_userid</A></Th></TR>\n"""
 
 		# <a href="#" id="toggle" onClick="toggle_it('tr1');toggle_it('tr2')">
 		current_type = 'cookies'
-		data += f"""<TR id=cookies><TD colspan="6" class="toggle_menu" onClick="toggle_it('cookies')"><A>Cookies ({len(results)})</A></TD></TR>"""
+		data += f"""<TR id=cookies><TD colspan="7" class="toggle_menu" onClick="toggle_it('cookies')"><A>Cookies ({len(results)})</A></TD></TR>"""
 		for index, cred in enumerate(results):
 			name,value,expires_utc,target,type,pillaged_from_computerid,pillaged_from_userid = cred
 			# Skip infos of
@@ -291,8 +294,11 @@ class reporting:
 			###Print block
 			for info in [name,value]:
 				data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
-			for info in [expires_utc]:
-				data += f"""<TD {special_style} ><A title="{info}"> {(datetime(1601, 1, 1) + timedelta(microseconds=info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
+			for info in [expires_utc]: #Formule a change si on intègre des cookies venant d'autre chose que chrome
+				if type == "browser-chrome" :
+					data += f"""<TD {special_style} ><A title="{info}"> {(datetime(1601, 1, 1) + timedelta(microseconds=info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
+				else:
+					data += f"""<TD {special_style} ><A title="{info}"> {(datetime.fromtimestamp(info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
 
 			# check if info contains a URL
 			if 'http:' in target or 'https:' in target:
@@ -529,14 +535,48 @@ class reporting:
 				self.logging.debug(ex)
 		self.logging.debug(f"Export Done!")
 
-	def get_credz_count(self,current_type):
+	def export_credz(self,distinct=True):
+		user_credz=self.get_credz(distinct=True)
+		filename = os.path.join(self.options.output_directory, 'raw_credz')
+		self.logging.info(f"Exporting {len(user_credz)} credz to {self.options.output_directory}")
+		if os.path.exists(filename):
+			os.remove(filename)
+		for index, cred in enumerate(user_credz):
+			username, password = cred
+			try:
+				f=open(filename,'ab')
+				f.write(f"{username}:{password}\n".encode('utf-8'))
+				f.close()
+			except Exception as ex:
+				self.logging.error(f"Exception in export raw credz to {filename}")
+				self.logging.debug(ex)
+		self.logging.debug(f"Export Done!")
+
+	def export_cookies(self):
+		user_credz=self.get_cookies()
+		filename = os.path.join(self.options.output_directory, 'raw_cookies')
+		self.logging.info(f"Exporting {len(user_credz)} cookies to {self.options.output_directory}")
+		if os.path.exists(filename):
+			os.remove(filename)
+		for index, cred in enumerate(user_credz):
+			name, value, expires_utc, target, type, pillaged_from_computerid, pillaged_from_userid = cred
+			try:
+				f=open(filename,'ab')
+				f.write(f"{target}:{name}:{value}\n".encode('utf-8'))
+				f.close()
+			except Exception as ex:
+				self.logging.error(f"Exception in export raw credz to {filename}")
+				self.logging.debug(ex)
+		self.logging.debug(f"Export Done!")
+
+	def get_credz_count(self,current_type,extra_conditions=''):
 		with self.conn:
 			cur = self.conn.cursor()
-			cur.execute(f"SELECT count(id) FROM credz WHERE LOWER(type)=LOWER('{current_type}')")
+			cur.execute(f"SELECT count(id) FROM credz WHERE LOWER(type)=LOWER('{current_type}') {extra_conditions}")
 			results = cur.fetchall()
 		return results
 
-	def get_credz(self, filterTerm=None, credz_type=None):
+	def get_credz(self, filterTerm=None, credz_type=None,distinct=False):
 		"""
 		Return credentials from the database.
 		"""
@@ -550,7 +590,10 @@ class reporting:
 			with self.conn:
 				cur = self.conn.cursor()
 				cur.execute("SELECT * FROM users WHERE LOWER(username) LIKE LOWER(?)", ['%{}%'.format(filterTerm)])
-
+		elif distinct :
+			with self.conn:
+				cur = self.conn.cursor()
+				cur.execute("SELECT DISTINCT username,password FROM credz WHERE LOWER(type) NOT IN ('sam','lsa','dcc2') AND password NOT IN ('')")
 		# otherwise return all credentials
 		else:
 			with self.conn:
@@ -640,6 +683,7 @@ class reporting:
 			cur.execute(f"SELECT name,value,expires_utc,target,type,pillaged_from_computerid,pillaged_from_userid  FROM cookies ORDER BY pillaged_from_computerid ASC, expires_utc DESC ")
 			results = cur.fetchall()
 		return results
+
 class database:
 
 	def __init__(self, conn,logger):

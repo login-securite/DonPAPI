@@ -185,6 +185,8 @@ def main():
 		#print("ENDING MAIN")
 		my_report = reporting(sqlite3.connect(options.db_path), logging, options, targets)
 		my_report.generate_report()
+		my_report.export_credz()
+		my_report.export_cookies()
 		if options.GetHashes:
 			my_report.export_MKF_hashes()
 			my_report.export_dcc2_hashes()
