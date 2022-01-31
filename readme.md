@@ -18,8 +18,8 @@ We aim at locating those "secured" credentials, and retrieve them using :
 - AdConnect (still require a manual operation)
 - Wifi key
 - Intenet explorer Credentials
-- Chrome cookies & credentials & cookies
-- Firefox cookies & credentials & cookies
+- Chrome cookies & credentials
+- Firefox cookies & credentials
 - VNC passwords
 - mRemoteNG password (with default config)
 
