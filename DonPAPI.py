@@ -28,7 +28,7 @@ from myseatbelt import MySeatBelt
 import concurrent.futures
 from lib.toolbox import split_targets,bcolors
 from database import database, reporting
-
+from datetime import date
 
 
 global assets
@@ -173,7 +173,7 @@ def main():
 
 	targets = split_targets(options.target_ip)
 	logging.info("Loaded {i} targets".format(i=len(targets)))
-	if not options.report :
+	if len(targets) > 0 :
 		try:
 			with concurrent.futures.ThreadPoolExecutor(max_workers=int(options.t)) as executor:
 				executor.map(seatbelt_thread, [(target, options, logging) for target in targets])
@@ -183,20 +183,26 @@ def main():
 				traceback.print_exc()
 			logging.error(str(e))
 		#print("ENDING MAIN")
-		my_report = reporting(sqlite3.connect(options.db_path), logging, options, targets)
-		my_report.generate_report()
-		my_report.export_credz()
-		my_report.export_sam()
-		my_report.export_cookies()
-		if options.GetHashes:
-			my_report.export_MKF_hashes()
-			my_report.export_dcc2_hashes()
 
-	#attendre la fin de toutes les threads ?
+
 	if options.report :
 		try:
 			my_report = reporting(sqlite3.connect(options.db_path), logging,options,targets)
-			my_report.generate_report()
+			# Splited reports
+			my_report.generate_report(report_file='%s_Client_view.html' % date.today().strftime("%d-%m-%Y"),
+			                          report_content=['credz', 'hash_reuse'], credz_content=['taskscheduler', 'LSA'])
+			my_report.generate_report(report_file='%s_Most_important_credz.html' % date.today().strftime("%d-%m-%Y"),
+			                          report_content=['credz'],
+			                          credz_content=['wifi', 'taskscheduler', 'credential-blob', 'browser', 'sysadmin',
+			                                         'LSA'])
+			my_report.generate_report(report_file='%s_cookies.html' % date.today().strftime("%d-%m-%Y"),
+			                          report_content=['cookies'], credz_content=[''])
+			# Main report
+			my_report.generate_report(report_file='%s_Full_Report.html' % date.today().strftime("%d-%m-%Y"))
+			logging.info("[+] Exporting loots to raw files : credz, sam, cookies")
+			my_report.export_credz()
+			my_report.export_sam()
+			my_report.export_cookies()
 			if options.GetHashes:
 				my_report.export_MKF_hashes()
 				my_report.export_dcc2_hashes()
