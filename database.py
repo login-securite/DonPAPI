@@ -12,10 +12,12 @@ class reporting:
 		self.targets = targets
 		self.report_file = os.path.join(self.options.output_directory,'%s_result.html' % date.today().strftime("%d-%m-%Y"))
 
-	def add_to_resultpage(self, datas):
+	def add_to_resultpage(self, datas,report_file=""):
 		try:
+			if report_file=="":
+				report_file=self.report_file
 			datas = datas.encode('ascii', 'ignore')
-			f = open(self.report_file, 'ab')
+			f = open(report_file, 'ab')
 			f.write(datas)
 			f.close()
 			return True
@@ -24,7 +26,7 @@ class reporting:
 			self.logging.debug(ex)
 			return False
 
-	def generate_report(self,type='', user='', target=''):
+	def generate_report(self,type='', user='', target='',report_content=['credz','cookies','files','connected_user','hash_reuse','audited_scope','masterkeys'],credz_content=['wifi', 'taskscheduler', 'credential-blob', 'browser', 'sysadmin','SAM', 'LSA', 'DCC2'],report_file=""):
 
 		try:
 			my_path = os.path.dirname(os.path.realpath(__file__))
@@ -39,18 +41,22 @@ class reporting:
 			self.logging.debug(f" Exception {bcolors.WARNING}  in running Report {bcolors.ENDC}")
 			self.logging.debug(ex)
 
-		self.logging.info("[+] Generating report")
+		self.logging.info(f"[+] Generating report : {report_file}")
 		if self.conn == None :
 			self.logging.debug(f"[+] db ERROR - {self.options.output_directory}")
 			return -1
 
 		try:
-			if os.path.exists(os.path.join(self.options.output_directory,'%s_result.html' % date.today().strftime("%d-%m-%Y"))):
-				if os.path.exists(os.path.join(self.options.output_directory,'%s_result_old.html' % date.today().strftime("%d-%m-%Y"))):
-					os.remove(os.path.join(self.options.output_directory,'%s_result_old.html' % date.today().strftime("%d-%m-%Y")))
-					os.rename(os.path.join(self.options.output_directory,'%s_result.html' % date.today().strftime("%d-%m-%Y")), os.path.join(self.options.output_directory,'%s_result_old.html' % date.today().strftime("%d-%m-%Y")))
-				os.remove(os.path.join(os.path.join(self.options.output_directory,'%s_result.html' % date.today().strftime("%d-%m-%Y"))))
-			self.report_file = os.path.join(self.options.output_directory,'%s_result.html' % date.today().strftime("%d-%m-%Y"))
+			if report_file=="":
+				self.report_file = os.path.join(self.options.output_directory,'%s_result.html' % date.today().strftime("%d-%m-%Y"))
+			else:
+				self.report_file=os.path.join(self.options.output_directory,report_file)
+			if os.path.exists(self.report_file):
+				if os.path.exists(self.report_file+"_old"):
+					os.remove(self.report_file+"_old")
+					os.rename(self.report_file, self.report_file+"_old")
+				os.remove(self.report_file)
+
 			if not os.path.exists(os.path.join(self.options.output_directory,'res')):
 				os.mkdir(os.path.join(self.options.output_directory,'res'))
 		except Exception as ex:
@@ -63,9 +69,6 @@ class reporting:
 				myfile,myfilename=myfiles
 				if os.path.exists(myfile) and not os.path.exists(os.path.join(os.path.join(self.options.output_directory,'res'), myfilename)):
 					shutil.copy2(myfile, os.path.join(os.path.join(self.options.output_directory,'res'), myfilename))
-				else:
-					self.logging.debug(f"{os.path.exists(myfile)} - {os.path.exists(os.path.join(os.path.join(self.options.output_directory,'res'), myfilename))}")
-
 		except Exception as ex:
 			self.logging.debug(f" Exception {bcolors.WARNING}  in RES copy {bcolors.ENDC}")
 			self.logging.debug(ex)
@@ -148,281 +151,300 @@ class reporting:
 		"""
 		self.add_to_resultpage(data)
 
-		results = self.get_credz()
+		if 'credz' in report_content :
+			results = self.get_credz()
+			#popolute credz report filtering :
+			if 'browser' in credz_content:
+				credz_content.append('browser-internet_explorer')
+				credz_content.append('browser-firefox')
+				credz_content.append('browser-chrome')
+			if 'sysadmin' in credz_content:
+				credz_content.append('VNC')
+				credz_content.append('MRemoteNG')
+				#credz_content.append('VNC')
 
-		data = """<table class="statistics"><TR>
-		<Th><a class="firstletter">U</a><a>sername</A></Th>
-		<Th><a class="firstletter">P</a><a>assword</A></Th>
-		<Th><a class="firstletter">T</a><a>arget</A></Th>
-		<Th><a class="firstletter">T</a><a>ype</A></Th>
-		<Th><a class="firstletter">P</a><a>illaged_from_computerid</A></Th>
-		<Th><a class="firstletter">P</a><a>illaged_from_userid</A></Th></TR>\n"""
+			data = """<table class="statistics"><TR>
+			<Th><a class="firstletter">U</a><a>sername</A></Th>
+			<Th><a class="firstletter">P</a><a>assword</A></Th>
+			<Th><a class="firstletter">T</a><a>arget</A></Th>
+			<Th><a class="firstletter">T</a><a>ype</A></Th>
+			<Th><a class="firstletter">P</a><a>illaged_from_computerid</A></Th>
+			<Th><a class="firstletter">P</a><a>illaged_from_userid</A></Th></TR>\n"""
 
-		#<a href="#" id="toggle" onClick="toggle_it('tr1');toggle_it('tr2')">
-		current_type=''
-		for index,cred in enumerate(results):
-			cred_id, file_path, username, password, target, type, pillaged_from_computerid, pillaged_from_userid = cred
-			if type != current_type:
-				current_type=type
-				current_type_count=self.get_credz_count(current_type,'AND username NOT IN ("NL$KM_history") AND target NOT IN ("WindowsLive:target=virtualapp/didlogical","Adobe App Info","Adobe App Prefetched Info","Adobe User Info","Adobe User OS Info","MicrosoftOffice16_Data:ADAL","LegacyGeneric:target=msteams_adalsso/adal_contex")')[0][0]
-				data += f"""<TR id={current_type}><TD colspan="6" class="toggle_menu" onClick="toggle_it('{current_type}')"><A>{current_type} ({current_type_count})</A></TD></TR>"""
-
-
-			#Skip infos of
-			# WindowsLive:target=virtualapp/didlogical
-			untreated_targets =["WindowsLive:target=virtualapp/didlogical","Adobe App Info","Adobe App Prefetched Info","Adobe User Info","Adobe User OS Info","MicrosoftOffice16_Data:ADAL","LegacyGeneric:target=msteams_adalsso/adal_contex"]
-			untreated_users = ["NL$KM_history"]
-
-			blacklist_bypass=False
-			for untreated in untreated_targets:
-				if untreated in target:
-					blacklist_bypass=True
-			for untreated in untreated_users:
-				if untreated in username:
-					blacklist_bypass=True
-			if blacklist_bypass:
-				continue
-
-			#Get computer infos
-			res=self.get_computer_infos(pillaged_from_computerid)
-			for index_, res2 in enumerate(res):
-				ip, hostname=res2
-			computer_info=f"{ip} | {hostname}"
-			#pillaged_from_userid
-			if pillaged_from_userid != None:
-				res=self.get_user_infos(pillaged_from_userid)
-				for index_, pillaged_username in enumerate(res):
-					pillaged_from_userid=pillaged_username[0]
-			else:
-				pillaged_from_userid=str(pillaged_from_userid)
-
-			if index % 2 == 0:
-				data += f"""<TR class=tableau_resultat_row0 {current_type}=1>"""
-			else:
-				data += f"""<TR class=tableau_resultat_row1 {current_type}=1>"""
-
-			if 'admin' in username.lower() : #Pour mettre des results en valeur
-				special_style = '''class="cracked"'''
-			else:
-				special_style = ""
+			#<a href="#" id="toggle" onClick="toggle_it('tr1');toggle_it('tr2')">
+			current_type=''
+			for index,cred in enumerate(results):
+				cred_id, file_path, username, password, target, type, pillaged_from_computerid, pillaged_from_userid = cred
+				#filtering data to be included in the report
+				if type not in credz_content:
+					continue
+				if type != current_type:
+					current_type=type
+					current_type_count=self.get_credz_count(current_type,'AND username NOT IN ("NL$KM_history") AND target NOT IN ("WindowsLive:target=virtualapp/didlogical","Adobe App Info","Adobe App Prefetched Info","Adobe User Info","Adobe User OS Info","MicrosoftOffice16_Data:ADAL","LegacyGeneric:target=msteams_adalsso/adal_contex")')[0][0]
+					data += f"""<TR id={current_type}><TD colspan="6" class="toggle_menu" onClick="toggle_it('{current_type}')"><A>{current_type} ({current_type_count})</A></TD></TR>"""
 
 
+				#Skip infos of
+				# WindowsLive:target=virtualapp/didlogical
+				untreated_targets =["WindowsLive:target=virtualapp/didlogical","Adobe App Info","Adobe App Prefetched Info","Adobe User Info","Adobe User OS Info","MicrosoftOffice16_Data:ADAL","LegacyGeneric:target=msteams_adalsso/adal_contex"]
+				untreated_users = ["NL$KM_history"]
 
-			###Print block
-			#Recup des username dans le target #/# a update dans myseatbelt.py pour faire une fonction dump_CREDENTIAL_XXXXX clean
-			if "LegacyGeneric:target=MicrosoftOffice1" in target:
-				username = f'''{target.split(':')[-1]}'''
-			#Les pass LSA sont souvent en Hexa
-			#if "LSA" in type:
-			try:
-				hex_passw=''
-				hex_passw=binascii.unhexlify(password).replace(b'>',b'')
-			except Exception as ex:
-				#print(ex)
-				pass
+				blacklist_bypass=False
+				for untreated in untreated_targets:
+					if untreated in target:
+						blacklist_bypass=True
+				for untreated in untreated_users:
+					if untreated in username:
+						blacklist_bypass=True
+				if blacklist_bypass:
+					continue
+
+				#Get computer infos
+				res=self.get_computer_infos(pillaged_from_computerid)
+				for index_, res2 in enumerate(res):
+					ip, hostname=res2
+				computer_info=f"{ip} | {hostname}"
+				#pillaged_from_userid
+				if pillaged_from_userid != None:
+					res=self.get_user_infos(pillaged_from_userid)
+					for index_, pillaged_username in enumerate(res):
+						pillaged_from_userid=pillaged_username[0]
+				else:
+					pillaged_from_userid=str(pillaged_from_userid)
+
+				if index % 2 == 0:
+					data += f"""<TR class=tableau_resultat_row0 {current_type}=1>"""
+				else:
+					data += f"""<TR class=tableau_resultat_row1 {current_type}=1>"""
+
+				if 'admin' in username.lower() : #Pour mettre des results en valeur
+					special_style = '''class="cracked"'''
+				else:
+					special_style = ""
 
 
-			for info in [username]:
-				data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
-			for info in [password]:
-				data += f"""<TD {special_style} ><A title="{hex_passw}"> {str(info)[:48]} </A></TD>"""
 
-				#check if info contains a URL
-			if 'http:' in target or 'https:' in target:
-				info2 = target[target.index('http'):]
-				special_ref = f'''href="{info2}" target="_blank" title="{target}"'''
-			elif 'ftp:' in target:
-				info2 = target[target.index('ftp'):]
-				special_ref = f'''href="{info2}" target="_blank" title="{target}"'''
-			elif "Domain:target=" in target:
-				info2=f'''rdp://full%20address=s:{target[target.index('Domain:target=')+len('Domain:target='):]}:3389&username=s:{username}&audiomode=i:2&disable%20themes=i:1'''
-				special_ref = f'''href="{info2}" title="{target}"'''
-			elif "LegacyGeneric:target=MicrosoftOffice1" in target:
-				target=f'''{target[target.index('LegacyGeneric:target=')+len('LegacyGeneric:target='):]}'''
-				special_ref = f'''href="https://login.microsoftonline.com/" target="_blank" title="OfficeLogin"'''
-			else:
-				special_ref = f'''title="{target}"'''
-			data += f"""<TD {special_style} ><A {special_ref}> {str(target)[:48]} </A></TD>"""
+				###Print block
+				#Recup des username dans le target #/# a update dans myseatbelt.py pour faire une fonction dump_CREDENTIAL_XXXXX clean
+				if "LegacyGeneric:target=MicrosoftOffice1" in target:
+					username = f'''{target.split(':')[-1]}'''
+				#Les pass LSA sont souvent en Hexa
+				#if "LSA" in type:
+				try:
+					hex_passw=''
+					hex_passw=binascii.unhexlify(password).replace(b'>',b'')
+				except Exception as ex:
+					#print(ex)
+					pass
 
-			for info in [type, computer_info, pillaged_from_userid]:
+
+				for info in [username]:
 					data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
-			data+="""</TR>\n"""
+				for info in [password]:
+					data += f"""<TD {special_style} ><A title="{hex_passw}"> {str(info)[:48]} </A></TD>"""
 
-		data += """</TABLE><BR>"""
-		self.add_to_resultpage(data)
-		###
+					#check if info contains a URL
+				if 'http:' in target or 'https:' in target:
+					info2 = target[target.index('http'):]
+					special_ref = f'''href="{info2}" target="_blank" title="{target}"'''
+				elif 'ftp:' in target:
+					info2 = target[target.index('ftp'):]
+					special_ref = f'''href="{info2}" target="_blank" title="{target}"'''
+				elif "Domain:target=" in target:
+					info2=f'''rdp://full%20address=s:{target[target.index('Domain:target=')+len('Domain:target='):]}:3389&username=s:{username}&audiomode=i:2&disable%20themes=i:1'''
+					special_ref = f'''href="{info2}" title="{target}"'''
+				elif "LegacyGeneric:target=MicrosoftOffice1" in target:
+					target=f'''{target[target.index('LegacyGeneric:target=')+len('LegacyGeneric:target='):]}'''
+					special_ref = f'''href="https://login.microsoftonline.com/" target="_blank" title="OfficeLogin"'''
+				else:
+					special_ref = f'''title="{target}"'''
+				data += f"""<TD {special_style} ><A {special_ref}> {str(target)[:48]} </A></TD>"""
+
+				for info in [type, computer_info, pillaged_from_userid]:
+						data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
+				data+="""</TR>\n"""
+
+			data += """</TABLE><BR>"""
+			self.add_to_resultpage(data)
+			###
 
 
 		##### List cookies
-		results = self.get_cookies()
+		if 'cookies' in report_content:
+			results = self.get_cookies()
 
-		data = """<table class="statistics"><TR>
-				<Th><a class="firstletter">N</a><a>ame</A></Th>
-				<Th><a class="firstletter">V</a><a>alue</A></Th>
-				<Th><a class="firstletter">U</a><a>ntil</A></Th>
-				<Th><a class="firstletter">T</a><a>arget</A></Th>
-				<Th><a class="firstletter">T</a><a>ype</A></Th>
-				<Th><a class="firstletter">P</a><a>illaged_from_computerid</A></Th>
-				<Th><a class="firstletter">P</a><a>illaged_from_userid</A></Th></TR>\n"""
+			data = """<table class="statistics"><TR>
+					<Th><a class="firstletter">N</a><a>ame</A></Th>
+					<Th><a class="firstletter">V</a><a>alue</A></Th>
+					<Th><a class="firstletter">U</a><a>ntil</A></Th>
+					<Th><a class="firstletter">T</a><a>arget</A></Th>
+					<Th><a class="firstletter">T</a><a>ype</A></Th>
+					<Th><a class="firstletter">P</a><a>illaged_from_computerid</A></Th>
+					<Th><a class="firstletter">P</a><a>illaged_from_userid</A></Th></TR>\n"""
 
-		# <a href="#" id="toggle" onClick="toggle_it('tr1');toggle_it('tr2')">
-		current_type = 'cookies'
-		data += f"""<TR id=cookies><TD colspan="7" class="toggle_menu" onClick="toggle_it('cookies')"><A>Cookies ({len(results)})</A></TD></TR>"""
-		for index, cred in enumerate(results):
-			name,value,expires_utc,target,type,pillaged_from_computerid,pillaged_from_userid = cred
-			# Skip infos of
-			# Get computer infos
-			res = self.get_computer_infos(pillaged_from_computerid)
-			for index_, res2 in enumerate(res):
-				ip, hostname = res2
-			computer_info = f"{ip} | {hostname}"
-			# pillaged_from_userid
-			if pillaged_from_userid != None:
-				res = self.get_user_infos(pillaged_from_userid)
-				for index_, pillaged_username in enumerate(res):
-					pillaged_from_userid = pillaged_username[0]
-			else:
-				pillaged_from_userid = str(pillaged_from_userid)
+			# <a href="#" id="toggle" onClick="toggle_it('tr1');toggle_it('tr2')">
+			current_type = 'cookies'
+			data += f"""<TR id=cookies><TD colspan="7" class="toggle_menu" onClick="toggle_it('cookies')"><A>Cookies ({len(results)})</A></TD></TR>"""
+			for index, cred in enumerate(results):
+				name,value,expires_utc,target,type,pillaged_from_computerid,pillaged_from_userid = cred
+				# Skip infos of
+				# Get computer infos
+				res = self.get_computer_infos(pillaged_from_computerid)
+				for index_, res2 in enumerate(res):
+					ip, hostname = res2
+				computer_info = f"{ip} | {hostname}"
+				# pillaged_from_userid
+				if pillaged_from_userid != None:
+					res = self.get_user_infos(pillaged_from_userid)
+					for index_, pillaged_username in enumerate(res):
+						pillaged_from_userid = pillaged_username[0]
+				else:
+					pillaged_from_userid = str(pillaged_from_userid)
 
-			if index % 2 == 0:
-				data += f"""<TR class=tableau_resultat_row0 {current_type}=1>"""
-			else:
-				data += f"""<TR class=tableau_resultat_row1 {current_type}=1>"""
+				if index % 2 == 0:
+					data += f"""<TR class=tableau_resultat_row0 {current_type}=1>"""
+				else:
+					data += f"""<TR class=tableau_resultat_row1 {current_type}=1>"""
 
-			special_style = ""
+				special_style = ""
 
-			###Print block
-			for info in [name,value]:
-				data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
-			for info in [expires_utc]: #Formule a change si on intègre des cookies venant d'autre chose que chrome
-				try:
-					if type == "browser-chrome" :
-						data += f"""<TD {special_style} ><A title="{info}"> {(datetime(1601, 1, 1) + timedelta(microseconds=info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
-					else:
-						data += f"""<TD {special_style} ><A title="{info}"> {(datetime.fromtimestamp(info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
-				except:
-					data += f"""<TD {special_style} ><A title="{info}"> {info} </A></TD>"""
+				###Print block
+				for info in [name,value]:
+					data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
+				for info in [expires_utc]: #Formule a change si on intègre des cookies venant d'autre chose que chrome
+					try:
+						if type == "browser-chrome" :
+							data += f"""<TD {special_style} ><A title="{info}"> {(datetime(1601, 1, 1) + timedelta(microseconds=info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
+						else:
+							data += f"""<TD {special_style} ><A title="{info}"> {(datetime.fromtimestamp(info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
+					except:
+						data += f"""<TD {special_style} ><A title="{info}"> {info} </A></TD>"""
 
-			# check if info contains a URL
-			if 'http:' in target or 'https:' in target:
-				info2 = target[target.index('http'):]
-				special_ref = f'''href="{info2}" target="_blank" title="{target}"'''
-			elif 'ftp:' in target:
-				info2 = target[target.index('ftp'):]
-				special_ref = f'''href="{info2}" target="_blank" title="{target}"'''
-			elif "Domain:target=" in target:
-				info2 = f'''rdp://full%20address=s:{target[target.index('Domain:target=') + len('Domain:target='):]}:3389&username=s:{username}&audiomode=i:2&disable%20themes=i:1'''
-				special_ref = f'''href="{info2}" title="{target}"'''
-			elif "LegacyGeneric:target=MicrosoftOffice1" in target:
-				target = f'''{target[target.index('LegacyGeneric:target=') + len('LegacyGeneric:target='):]}'''
-				special_ref = f'''href="https://login.microsoftonline.com/" target="_blank" title="OfficeLogin"'''
-			else:
-				special_ref = f'''title="{target}"'''
-			data += f"""<TD {special_style} ><A {special_ref}> {str(target)[:48]} </A></TD>"""
+				# check if info contains a URL
+				if 'http:' in target or 'https:' in target:
+					info2 = target[target.index('http'):]
+					special_ref = f'''href="{info2}" target="_blank" title="{target}"'''
+				elif 'ftp:' in target:
+					info2 = target[target.index('ftp'):]
+					special_ref = f'''href="{info2}" target="_blank" title="{target}"'''
+				elif "Domain:target=" in target:
+					info2 = f'''rdp://full%20address=s:{target[target.index('Domain:target=') + len('Domain:target='):]}:3389&username=s:{username}&audiomode=i:2&disable%20themes=i:1'''
+					special_ref = f'''href="{info2}" title="{target}"'''
+				elif "LegacyGeneric:target=MicrosoftOffice1" in target:
+					target = f'''{target[target.index('LegacyGeneric:target=') + len('LegacyGeneric:target='):]}'''
+					special_ref = f'''href="https://login.microsoftonline.com/" target="_blank" title="OfficeLogin"'''
+				else:
+					special_ref = f'''title="{target}"'''
+				data += f"""<TD {special_style} ><A {special_ref}> {str(target)[:48]} </A></TD>"""
 
-			for info in [type, computer_info, pillaged_from_userid]:
-				data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
-			data += """</TR>\n"""
+				for info in [type, computer_info, pillaged_from_userid]:
+					data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
+				data += """</TR>\n"""
 
-		data += """</TABLE><BR>"""
-		self.add_to_resultpage(data)
+			data += """</TABLE><BR>"""
+			self.add_to_resultpage(data)
+
 		##### List gathered files
-		results = self.get_file()
+		if 'files' in report_content:
+			results = self.get_file()
 
-		data = """<table class="statistics" id="Files"><TR><Th><a class="firstletter">F</a><a>ilename</A></Th>
-								<Th><a class="firstletter">T</a><a>ype</A></Th>
-								<Th><a class="firstletter">U</a><a>ser</A></Th>
-								<Th><a class="firstletter">I</a><a>p</A></Th></TR>\n"""
-		for index, myfile in enumerate(results):
-			try:
-				file_path, filename, extension, pillaged_from_computerid,pillaged_from_userid = myfile
+			data = """<table class="statistics" id="Files"><TR><Th><a class="firstletter">F</a><a>ilename</A></Th>
+									<Th><a class="firstletter">T</a><a>ype</A></Th>
+									<Th><a class="firstletter">U</a><a>ser</A></Th>
+									<Th><a class="firstletter">I</a><a>p</A></Th></TR>\n"""
+			for index, myfile in enumerate(results):
+				try:
+					file_path, filename, extension, pillaged_from_computerid,pillaged_from_userid = myfile
+					res = self.get_computer_infos(pillaged_from_computerid)
+					for index, res2 in enumerate(res):
+						ip, hostname = res2
+					computer_info = f"{ip} | {hostname}"
+					res = self.get_user_infos(pillaged_from_userid)
+					for index, res2 in enumerate(res):
+						username = res2[0]
+					special_ref = f'''href="file://{file_path}" target="_blank" title="{filename}"'''
+					data += f"""<TR><TD><A {special_ref}> {filename} </A></TD><TD> {extension} </TD><TD> {username} </TD><TD> {computer_info} </TD></TR>\n"""
+				except Exception as ex:
+					self.logging.debug(f" Exception {bcolors.WARNING}  in getting File for {file_path} {bcolors.ENDC}")
+					self.logging.debug(ex)
+					return False
+			data += """</TABLE><BR>"""
+			self.add_to_resultpage(data)
+
+		##### Identify user / IP relations
+		# Confirm audited scope :
+		if 'connected_user' in report_content:
+			results = self.get_connected_user()
+
+			data = """<table class="statistics" id="Connected-users"><TR><Th><a class="firstletter">U</a><a>sername</A></Th>
+							<Th><a class="firstletter">I</a><a>P</A></Th></TR>\n"""
+
+			for index, cred in enumerate(results):
+				try:
+					ip, username = cred
+					data += """<TR><TD> %s </TD><TD> %s </TD></TR>\n""" % (username,ip)
+				except Exception as ex:
+					self.logging.debug(f" Exception {bcolors.WARNING}  in Identify user / IP relations for {cred} {bcolors.ENDC}")
+					self.logging.debug(ex)
+					return False
+			data += """</TABLE><BR>"""
+			self.add_to_resultpage(data)
+
+
+		##### Identify Local hash reuse
+		if 'hash_reuse' in report_content:
+			results = self.get_credz_sam()
+			data = """<table class="statistics" id="Local_account_reuse"><TR><Th><a class="firstletter">L</a><a>ocal account reuse : </Th></TR>\n"""
+			for index, cred in enumerate(results):
+				username, password, type, pillaged_from_computerid = cred
 				res = self.get_computer_infos(pillaged_from_computerid)
 				for index, res2 in enumerate(res):
 					ip, hostname = res2
 				computer_info = f"{ip} | {hostname}"
-				res = self.get_user_infos(pillaged_from_userid)
-				for index, res2 in enumerate(res):
-					username = res2[0]
-				special_ref = f'''href="file://{file_path}" target="_blank" title="{filename}"'''
-				data += f"""<TR><TD><A {special_ref}> {filename} </A></TD><TD> {extension} </TD><TD> {username} </TD><TD> {computer_info} </TD></TR>\n"""
-			except Exception as ex:
-				self.logging.debug(f" Exception {bcolors.WARNING}  in getting File for {file_path} {bcolors.ENDC}")
-				self.logging.debug(ex)
-				return False
-		data += """</TABLE><BR>"""
-		self.add_to_resultpage(data)
-
-		##### Identify user / IP relations
-		# Confirm audited scope :
-		results = self.get_connected_user()
-
-		data = """<table class="statistics" id="Connected-users"><TR><Th><a class="firstletter">U</a><a>sername</A></Th>
-						<Th><a class="firstletter">I</a><a>P</A></Th></TR>\n"""
-
-		for index, cred in enumerate(results):
-			try:
-				ip, username = cred
-				data += """<TR><TD> %s </TD><TD> %s </TD></TR>\n""" % (username,ip)
-			except Exception as ex:
-				self.logging.debug(f" Exception {bcolors.WARNING}  in Identify user / IP relations for {cred} {bcolors.ENDC}")
-				self.logging.debug(ex)
-				return False
-		data += """</TABLE><BR>"""
-		self.add_to_resultpage(data)
-
-
-		##### Identify Local hash reuse
-		results = self.get_credz_sam()
-		data = """<table class="statistics" id="Local_account_reuse"><TR><Th><a class="firstletter">L</a><a>ocal account reuse : </Th></TR>\n"""
-		for index, cred in enumerate(results):
-			username, password, type, pillaged_from_computerid = cred
-			res = self.get_computer_infos(pillaged_from_computerid)
-			for index, res2 in enumerate(res):
-				ip, hostname = res2
-			computer_info = f"{ip} | {hostname}"
-			data += """<TR><TD> %s </TD><TD> %s </TD><TD> %s </TD><TD> %s </TD></TR>\n""" % (username, password, type, computer_info)
-		data += """</TABLE><BR>"""
-		self.add_to_resultpage(data)
+				data += """<TR><TD> %s </TD><TD> %s </TD><TD> %s </TD><TD> %s </TD></TR>\n""" % (username, password, type, computer_info)
+			data += """</TABLE><BR>"""
+			self.add_to_resultpage(data)
 
 
 		# Confirm audited scope :
-		results = self.get_computers()
-		data = """<table class="statistics" id="Scope_Audited"><TR><Th><a class="firstletter">S</a><a>cope Audited : </Th></TR>\n"""
-		data += """<TR><Th><a class="firstletter">I</a><a>p</A></Th>
-				<Th><a class="firstletter">H</a><a>ostname</A></Th>
-				<Th><a class="firstletter">D</a><a>omain</A></Th>
-				<Th><a class="firstletter">O</a><a>S</A></Th>
-				<Th><a class="firstletter">S</a><a>mb signing enabled</A></Th>
-				<Th><a class="firstletter">S</a><a>mb v1</A></Th>
-				<Th><a class="firstletter">I</a><a>s Admin</A></Th>
-				<Th><a class="firstletter">C</a><a>onnectivity</A></Th>
-				</TR>\n"""
+		if 'audited_scope' in report_content:
+			results = self.get_computers()
+			data = """<table class="statistics" id="Scope_Audited"><TR><Th><a class="firstletter">S</a><a>cope Audited : </Th></TR>\n"""
+			data += """<TR><Th><a class="firstletter">I</a><a>p</A></Th>
+					<Th><a class="firstletter">H</a><a>ostname</A></Th>
+					<Th><a class="firstletter">D</a><a>omain</A></Th>
+					<Th><a class="firstletter">O</a><a>S</A></Th>
+					<Th><a class="firstletter">S</a><a>mb signing enabled</A></Th>
+					<Th><a class="firstletter">S</a><a>mb v1</A></Th>
+					<Th><a class="firstletter">I</a><a>s Admin</A></Th>
+					<Th><a class="firstletter">C</a><a>onnectivity</A></Th>
+					</TR>\n"""
 
-		for index, cred in enumerate(results):
-			ip, hostname, domain, my_os, smb_signing_enabled,smbv1_enabled,is_admin,connectivity = cred
-			data+="<TR>"
-			for info in [ip, hostname, domain, my_os]:
-				data += f"""<TD> {info} </TD>"""
-			if smb_signing_enabled:
-				data+="<TD> Ok </TD>"
-			else:
-				data += """<TD><a class="firstletter"> NOT required </A></TD>"""
-			if smbv1_enabled:
-				data+="<TD> Yes </TD>"
-			else:
-				data += "<TD> No </TD>"
-			if is_admin:
-				data+="""<TD> Admin </A></TD>"""
-			else:
-				data += """<TD><a class="firstletter"> No </A></TD>"""
-			for info in [connectivity]:
-				data += f"""<TD> {info} </TD>"""
-			data+="</TR>\n"
-		data += """</TABLE><BR>\n"""
-		self.add_to_resultpage(data)
+			for index, cred in enumerate(results):
+				ip, hostname, domain, my_os, smb_signing_enabled,smbv1_enabled,is_admin,connectivity = cred
+				data+="<TR>"
+				for info in [ip, hostname, domain, my_os]:
+					data += f"""<TD> {info} </TD>"""
+				if smb_signing_enabled:
+					data+="<TD> Ok </TD>"
+				else:
+					data += """<TD><a class="firstletter"> NOT required </A></TD>"""
+				if smbv1_enabled:
+					data+="<TD> Yes </TD>"
+				else:
+					data += "<TD> No </TD>"
+				if is_admin:
+					data+="""<TD> Admin </A></TD>"""
+				else:
+					data += """<TD><a class="firstletter"> No </A></TD>"""
+				for info in [connectivity]:
+					data += f"""<TD> {info} </TD>"""
+				data+="</TR>\n"
+			data += """</TABLE><BR>\n"""
+			self.add_to_resultpage(data)
 
 		#Etat des masterkeyz
-		if self.options.debug :
+		if self.options.debug and 'masterkeys' in report_content :
 			results=self.get_masterkeys()
 			data = """<table class="statistics" id="Scope_Audited"><TR><Th><a class="firstletter">M</a><a>asterkeys : </Th></TR>\n"""
 			data += """<TR><Th><a class="firstletter">G</a><a>uid</A></Th>
