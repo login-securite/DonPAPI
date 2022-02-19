@@ -295,10 +295,13 @@ class reporting:
 			for info in [name,value]:
 				data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
 			for info in [expires_utc]: #Formule a change si on intègre des cookies venant d'autre chose que chrome
-				if type == "browser-chrome" :
-					data += f"""<TD {special_style} ><A title="{info}"> {(datetime(1601, 1, 1) + timedelta(microseconds=info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
-				else:
-					data += f"""<TD {special_style} ><A title="{info}"> {(datetime.fromtimestamp(info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
+				try:
+					if type == "browser-chrome" :
+						data += f"""<TD {special_style} ><A title="{info}"> {(datetime(1601, 1, 1) + timedelta(microseconds=info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
+					else:
+						data += f"""<TD {special_style} ><A title="{info}"> {(datetime.fromtimestamp(info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
+				except:
+					data += f"""<TD {special_style} ><A title="{info}"> {info} </A></TD>"""
 
 			# check if info contains a URL
 			if 'http:' in target or 'https:' in target:
