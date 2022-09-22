@@ -63,7 +63,7 @@ from lib.toolbox import bcolors
 def is_password_hash(password):
 	
 	try:
-        unhexlify(password)
+		unhexlify(password)
 
 		# usually lower or upper case
 		if not ( password.isupper() or password.islower()):
@@ -71,9 +71,9 @@ def is_password_hash(password):
 		
 		#hash MD4 or sha1
 		if len(password)==32 or len(password)==40: 
-        	return True
-    except Error:
-        return 0
+			return True
+	except Error:
+		return 0
 
 	#is sha1, MD4, sha256
 	return 0
