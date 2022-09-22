@@ -37,7 +37,7 @@ import argparse
 import logging
 import sys
 import re
-from binascii import unhexlify, hexlify
+from binascii import unhexlify, hexlify, Error
 from hashlib import pbkdf2_hmac
 from impacket import LOG
 from Cryptodome.Cipher import AES, PKCS1_v1_5
@@ -61,9 +61,20 @@ from lib.toolbox import bcolors
 
 
 def is_password_hash(password):
-	#TODO
-	if len(password)==32 :#NT hash
-		return True
+	
+	try:
+        unhexlify(password)
+
+		# usually lower or upper case
+		if not ( password.isupper() or password.islower()):
+			return 0
+		
+		#hash MD4 or sha1
+		if len(password)==32 or len(password)==40: 
+        	return True
+    except Error:
+        return 0
+
 	#is sha1, MD4, sha256
 	return 0
 
