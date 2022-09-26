@@ -161,6 +161,7 @@ class reporting:
 			if 'sysadmin' in credz_content:
 				credz_content.append('VNC')
 				credz_content.append('MRemoteNG')
+				credz_content.append('Putty')
 				#credz_content.append('VNC')
 
 			data = """<table class="statistics"><TR>

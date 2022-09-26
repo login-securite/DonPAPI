@@ -1909,6 +1909,11 @@ class MySeatBelt:
 		myMRemoteNG = mRemoteNG(self.smb,self.myregops,self.myfileops,self.logging,self.options,self.db,self.users)
 		myMRemoteNG.run()
 
+	def GetPutty(self):
+		from software.sysadmin.putty import Putty
+		myNewModule = Putty(self.smb,self.myregops,self.myfileops,self.logging,self.options,self.db)
+		myNewModule.run()
+
 	def GetNew_Module(self):
 		myNewModule = new_module(self.smb,self.myregops,self.myfileops,self.logging,self.options,self.db,self.users)
 		myNewModule.run()
@@ -1921,6 +1926,8 @@ class MySeatBelt:
 				self.do_who()
 				self.get_users()
 				#
+				self.GetPutty()
+				'''
 
 				if self.options.no_remoteops == False:
 					try:
@@ -1937,12 +1944,14 @@ class MySeatBelt:
 				if self.options.no_browser == False:
 					self.GetChormeSecrets()
 					self.GetMozillaSecrets_wrapper()
-				if self.options.no_vnc == False and self.options.no_sysadmins == False:
-					self.GetVNC()
 				if self.options.no_sysadmins == False :
 					self.GetMRemoteNG()
+					self.GetPutty()
+					if self.options.no_vnc == False:
+						self.GetVNC()
 				if self.options.no_recent == False:
 					self.GetRecentFiles()
+				'''
 				"""
 				***Dev your new module code and start it from here
 				

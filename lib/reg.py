@@ -226,17 +226,19 @@ class RegHandler:
         else:
             print(keyName)
             self.__print_key_values(dce, ans2['phkResult'])
+            values=[]
             i = 0
             while True:
                 try:
                     key = rrp.hBaseRegEnumKey(dce, ans2['phkResult'], i)
                     print(keyName + '\\' + key['lpNameOut'][:-1])
+                    values.append(f"{keyName}\\{key['lpNameOut'][:-1]}")
                     i += 1
-                except Exception:
+                except Exception as e:
                     break
                     # ans5 = rrp.hBaseRegGetVersion(rpc, ans2['phkResult'])
                     # ans3 = rrp.hBaseRegEnumKey(rpc, ans2['phkResult'], 0)
-
+            return values
     def __print_key_values(self, rpc, keyHandler):
         i = 0
         while True:
