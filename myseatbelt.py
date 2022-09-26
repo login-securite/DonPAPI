@@ -1926,8 +1926,6 @@ class MySeatBelt:
 				self.do_who()
 				self.get_users()
 				#
-				self.GetPutty()
-				'''
 
 				if self.options.no_remoteops == False:
 					try:
@@ -1951,7 +1949,7 @@ class MySeatBelt:
 						self.GetVNC()
 				if self.options.no_recent == False:
 					self.GetRecentFiles()
-				'''
+
 				"""
 				***Dev your new module code and start it from here
 				
