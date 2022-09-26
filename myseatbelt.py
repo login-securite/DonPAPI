@@ -1911,8 +1911,13 @@ class MySeatBelt:
 
 	def GetPutty(self):
 		from software.sysadmin.putty import Putty
-		myNewModule = Putty(self.smb,self.myregops,self.myfileops,self.logging,self.options,self.db)
-		myNewModule.run()
+		myPutty = Putty(self.smb,self.myregops,self.myfileops,self.logging,self.options,self.db)
+		myPutty.run()
+
+	def GetWinscp(self):
+		from software.sysadmin.winscp import Winscp
+		myWinscp = Winscp(self.smb,self.myregops,self.myfileops,self.logging,self.options,self.db)
+		myWinscp.run()
 
 	def GetNew_Module(self):
 		myNewModule = new_module(self.smb,self.myregops,self.myfileops,self.logging,self.options,self.db,self.users)
@@ -1945,6 +1950,7 @@ class MySeatBelt:
 				if self.options.no_sysadmins == False :
 					self.GetMRemoteNG()
 					self.GetPutty()
+					self.GetWinscp()
 					if self.options.no_vnc == False:
 						self.GetVNC()
 				if self.options.no_recent == False:
