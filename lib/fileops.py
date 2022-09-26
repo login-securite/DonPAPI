@@ -207,18 +207,33 @@ class MyRegOps():
 		try:
 			#self.myRegHandler.__options.action='QUERY'
 			self.options.keyName = reg_path
-			self.options.s = True
+			self.options.s = True #__print_all_subkeys_and_entries
 			self.options.v = False
 			self.options.ve = False
 			self.reg_init()
 			self.logging.debug(f"[{self.options.target_ip}] Querying reg : {self.options.keyName}")
 			#self.myRegHandler=RegHandler(self.options.username, self.options.password, self.options.domain, self.options)
-			self.myRegHandler.run(self.options.target_ip,self.options.target_ip)
+			return self.myRegHandler.run(self.options.target_ip,self.options.target_ip)
 
 		except Exception as ex:
 				self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception get_reg_list {bcolors.ENDC}")
 				self.logging.debug(ex)
 
+	def get_reg_subkey(self,reg_path):
+		try:
+			#self.myRegHandler.__options.action='QUERY'
+			self.options.keyName = reg_path
+			self.options.s = False #__print_all_subkeys_and_entries
+			self.options.v = False
+			self.options.ve = False
+			self.reg_init()
+			self.logging.debug(f"[{self.options.target_ip}] Querying reg : {self.options.keyName}")
+			#self.myRegHandler=RegHandler(self.options.username, self.options.password, self.options.domain, self.options)
+			return self.myRegHandler.run(self.options.target_ip,self.options.target_ip)
+
+		except Exception as ex:
+				self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception get_reg_list {bcolors.ENDC}")
+				self.logging.debug(ex)
 
 from impacket.smb3structs import FILE_READ_DATA, FILE_WRITE_DATA
 
