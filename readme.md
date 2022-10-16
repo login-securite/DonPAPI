@@ -1,17 +1,21 @@
 # DonPAPI
+
 Dumping revelant information on compromised targets without AV detection
 ![alt text](https://github.com/login-securite/DonPAPI/blob/main/res/Logo%20DonPapi.png)
 
 
 ## DPAPI dumping
+
 Lots of credentials are protected by [DPAPI](https://docs.microsoft.com/en-us/dotnet/standard/security/how-to-use-data-protection).
 
 We aim at locating those "secured" credentials, and retrieve them using :
+
 - User password
 - Domaine DPAPI BackupKey
 - Local machine DPAPI Key (protecting `TaskScheduled` blob)
 
 ## Curently gathered info
+
 - Windows credentials (Taskscheduled credentials & a lot more)
 - Windows Vaults
 - Windows RDP credentials 
@@ -24,12 +28,14 @@ We aim at locating those "secured" credentials, and retrieve them using :
 - mRemoteNG password (with default config)
 
 ## Check for a bit of compliance
+
 - SMB signing status
 - OS/Domain/Hostname/Ip of the audited scope
 
 ## Operational use
 
 With local admin account on a host, we can :
+
 - Gather machine protected DPAPI secrets
   - ScheduledTask that will contain cleartext login/password of the account configured to run the task
   - Wi-Fi passwords
@@ -95,9 +101,11 @@ Target can be an IP, IP range, CIDR, file containing list targets (one per line)
 
 
 ## Opsec consideration
+
 The RemoteOps part can be spoted by some EDR. It can be disabled using `--no_remoteops` flag, but then the machine DPAPI key won't be retrieved, and scheduled task credentials/Wi-Fi passwords won't be harvested. 
 
-## Installation 
+## Installation
+
 ```
 git clone https://github.com/login-securite/DonPAPI.git
 cd DonPAPI
@@ -106,7 +114,9 @@ python3 DonPAPI.py
 ```
 
 ## Credits
-All the credits goes to these great guys for doing the hard research & coding : 
+
+All the credits goes to these great guys for doing the hard research & coding :
+
 - Benjamin Delpy ([@gentilkiwi](https://twitter.com/gentilkiwi)) for most of the DPAPI research (always greatly commented, <3 your code)
 - Alberto Solino ([@agsolino](https://twitter.com/agsolino)) for the tremendous work of Impacket (https://github.com/SecureAuthCorp/impacket). Almost everything we do here comes from impacket. 
 - [Alesandro Z](https://github.com/AlessandroZ) & everyone who worked on Lazagne (https://github.com/AlessandroZ/LaZagne/wiki) for the VNC & Firefox modules, and most likely for a lots of other ones in the futur. 
@@ -115,6 +125,7 @@ All the credits goes to these great guys for doing the hard research & coding :
 - All the Team at [@LoginSecurite](https://twitter.com/LoginSecurite) for their help in debugging my shity code (special thanks to [@layno](https://github.com/clayno) & [@HackAndDo](https://twitter.com/HackAndDo) for that)
 
 ## Todo
+
 - Finish ADSync/ADConnect password extraction
 - CREDHISTORY full extraction
 - Extract windows Certificates
