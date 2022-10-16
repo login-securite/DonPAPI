@@ -113,6 +113,15 @@ python3 -m pip install -r requirements.txt
 python3 DonPAPI.py
 ```
 
+or
+
+```
+git clone https://github.com/login-securite/DonPAPI.git
+cd DonPAPI
+poetry install
+poetry run donpapi
+```
+
 ## Credits
 
 All the credits goes to these great guys for doing the hard research & coding :
