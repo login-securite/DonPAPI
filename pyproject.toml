@@ -2,7 +2,23 @@
 name = "donpapi"
 version = "1.0.0"
 description = "Dumping revelant information on compromised targets without AV detection"
-authors = ["login-securite"]
+authors = ["Login Securite <contact@login-securite.com>"]
+readme = "readme.md"
+homepage = "https://github.com/login-securite/DonPAPI"
+repository = "https://github.com/login-securite/DonPAPI"
+exclude = []
+include = ["config/*", "lazagne/*", "lib/*", "software/*", "*.py"]
+classifiers = [
+    'Environment :: Console',
+    'Programming Language :: Python :: 3',
+    'Topic :: Security',
+]
+packages = [
+    { include = "lib", from = "." }
+]
+
+[tool.poetry.scripts]
+donpapi = 'DonPAPI:main'
 
 [tool.poetry.dependencies]
 python = "^3.9"
