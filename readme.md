@@ -21,7 +21,7 @@ We aim at locating those "secured" credentials, and retrieve them using :
 - Windows RDP credentials 
 - AdConnect (still require a manual operation)
 - Wifi key
-- Intenet explorer Credentials
+- Internet explorer Credentials
 - Chrome cookies & credentials
 - Firefox cookies & credentials
 - VNC passwords
