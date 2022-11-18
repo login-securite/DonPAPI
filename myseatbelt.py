@@ -195,6 +195,7 @@ class MySeatBelt:
 			if self.options.k is True:
 				self.logging.debug(f"[{self.options.target_ip}] [-] initialising smb Kerberos Authentification to {self.options.domain} / {self.options.username} : {self.options.password}, @ {self.options.dc_ip} , Hash : {self.options.lmhash} : {self.options.nthash}, AESKey {self.options.aesKey}")
 				self.smb.kerberosLogin(username, password, domain, self.options.lmhash, self.options.nthash, self.options.aesKey, self.options.dc_ip)
+				return True
 			#elif self.options.hashes != None:
 			else:
 				if self.options.laps is True and username != '' and password != '':  # not doing LAPS for null session
