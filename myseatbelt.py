@@ -378,7 +378,7 @@ class MySeatBelt:
 				self.logging.debug(
 					f"[{self.options.target_ip}] {bcolors.WARNING}Exception GetMozillaSecrets_wrapper for {user.username} {bcolors.ENDC}")
 				self.logging.debug(ex)
-	def GetChormeSecrets(self):
+	def GetChromeSecrets(self):
 		self.logging.info(f"[{self.options.target_ip}] {bcolors.OKBLUE}[+] Gathering Chrome Secrets {bcolors.ENDC}")
 		blacklist = ['.', '..']
 		# Parse chrome
@@ -1946,7 +1946,7 @@ class MySeatBelt:
 					self.GetWifi()
 					self.GetVaults()
 				if self.options.no_browser == False:
-					self.GetChormeSecrets()
+					self.GetChromeSecrets()
 					self.GetMozillaSecrets_wrapper()
 				if self.options.no_sysadmins == False :
 					self.GetMRemoteNG()
