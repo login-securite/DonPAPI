@@ -777,7 +777,7 @@ class RemoteOperations:
         return True
 
     def __retrieveHive(self, hiveName):
-        tmpFileName = ''.join([random.choice(string.ascii_letters) for _ in range(8)]) + '.tmp'
+        tmpFileName = ''.join([random.choice(string.ascii_letters) for _ in range(12)]) + '.log'
         ans = rrp.hOpenLocalMachine(self.__rrp)
         regHandle = ans['phKey']
         try:
