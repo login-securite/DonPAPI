@@ -341,21 +341,21 @@ class CertificatesTriage():
             certblob = CERTBLOB(certblob_bytes)
             guid = cert.split('\\')[-1]
             if certblob.der is not None:
+                self.logging.debug(f"[{self.options.target_ip}] Found certificate blob {guid} for MACHINE$")
                 cert = self.der_to_cert(certblob.der)
                 certificates[guid] = cert
+        self.logging.debug(f"[{self.options.target_ip}] Found {len(certificates)} certificate blob for MACHINE$")
         return certificates
 
     def triage_certificates(self) -> List[Certificate]:
         certificates = []
         for user in [u for u in self.users if u.username not in self.false_positive and u.username != "MACHINE$"]:
             try:
-                certificates += self.triage_certificates_for_user(user=user)                         
+                certificates += self.triage_certificates_for_user(user=user)
             except Exception as e:
-                if logging.getLogger().level == logging.DEBUG:
-                    import traceback
-                    traceback.print_exc()
-                    logging.debug(str(e))
+                self.logging.debug(str(e))
                 pass
+        self.logging.debug(f"[{self.options.target_ip}] Found {len(certificates)} certificate blob for users")
         return certificates
 
     def triage_certificates_for_user(self, user: MyUser) -> List[Certificate]:
@@ -371,7 +371,7 @@ class CertificatesTriage():
         for privatekey_path in privatekeys_paths:
             pkeys_dirs = self.myfileops.do_ls(privatekey_path, '*', display=False)
             for longname, is_dir in pkeys_dirs:
-                self.logging.debug("ls returned file %s" % longname)
+                self.logging.debug("[{self.options.target_ip}] ls returned file %s" % longname)
                 if longname not in self.false_positive and is_dir:
                     sid = longname
                     pkeys_sid_path = ntpath.join(privatekey_path,sid)
@@ -380,7 +380,7 @@ class CertificatesTriage():
                         if not is_dir2 and is_certificate_guid(file_longname):
                             pkey_guid = file_longname
                             pkey_filepath = ntpath.join(pkeys_sid_path, pkey_guid)
-                            self.logging.debug("Found PrivateKey Blob: %s" %  (pkey_filepath))
+                            self.logging.debug("[{self.options.target_ip}] Found PrivateKey Blob: %s" %  (pkey_filepath))
                             data = b''
                             try:
                                 filename = self.myfileops.get_file(ntpath.join(pkeys_sid_path, pkey_guid), allow_access_error=False)
@@ -402,7 +402,7 @@ class CertificatesTriage():
                             except Exception as e:
                                 import traceback
                                 traceback.print_exc()
-                                logging.debug(str(e))
+                                self.logging.debug(str(e))
         return pkeys
     
     def loot_certificates(self, certificates_paths: List[str]) -> Dict[str, x509.Certificate]:
@@ -410,11 +410,11 @@ class CertificatesTriage():
         for certificate_path in certificates_paths:
             certs_dirs = self.myfileops.do_ls(certificate_path, '*', display=False)
             for longname, is_dir in certs_dirs:
-                self.logging.debug("ls returned file %s" % longname)
+                self.logging.debug("[{self.options.target_ip}] ls returned file %s" % longname)
                 if longname not in self.false_positive:
                     try:
                         certpath = ntpath.join(certificate_path, longname)
-                        self.logging.debug("Found Certificates Blob: %s" %  (certpath))
+                        self.logging.debug("[{self.options.target_ip}] Found Certificates Blob: %s" %  (certpath))
                         data = b''
                         with open(self.myfileops.get_file(certpath), 'rb') as fp:
                             data = fp.read()
@@ -432,7 +432,7 @@ class CertificatesTriage():
             if hashlib.md5(cert.public_key().public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)).hexdigest() in private_keys.keys():
                 # Matching public and private key
                 pkey = private_keys[hashlib.md5(cert.public_key().public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)).hexdigest()]
-                logging.debug("Found match between %s certificate and %s private key !" % (name, pkey[0]))
+                self.logging.debug("[{self.options.target_ip}] Found match between %s certificate and %s private key !" % (name, pkey[0]))
                 key = load_der_private_key(pkey[1].export_key('DER'), password=None)
                 pfx = self.create_pfx(key=key,cert=cert)
                 username = self.get_id_from_certificate(certificate=cert)[1].replace('@','_')
