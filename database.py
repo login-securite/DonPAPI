@@ -277,11 +277,11 @@ class reporting:
 
 			data = """
 					<table class="statistics"><TR>
-					<Th><a class="firstletter">I</a><a>ssuer</A></Th>
-					<Th><a class="firstletter">S</a><a>ubject</A></Th>
-					<Th><a class="firstletter">P</a><a>illaged from</A></Th>
-					<Th><a class="firstletter">P</a><a>illaged with</A></Th></TR>\n
-					<Th><a class="firstletter">C</a><a>lient auth</A></Th>
+					<Th style="text-align: center"><a class="firstletter">I</a><a>ssuer</A></Th>
+					<Th style="text-align: center"><a class="firstletter">S</a><a>ubject</A></Th>
+					<Th style="text-align: center"><a class="firstletter">P</a><a>illaged from</A></Th>
+					<Th style="text-align: center"><a class="firstletter">P</a><a>illaged with</A></Th>
+					<Th style="text-align: center"><a class="firstletter">C</a><a>lient auth</A></Th></TR>\n
 					"""
 
 			current_type = 'certificates'
@@ -308,7 +308,7 @@ class reporting:
 
 				###Print block
 				for info in [issuer, subject ,computer_info, pillaged_from_userid, client_auth]:
-					data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:20]} </A></TD>"""
+					data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
 				data += """</TR>\n"""
 			data += """</TABLE><BR>"""
 			self.add_to_resultpage(data)
