@@ -30,7 +30,7 @@ class reporting:
 
 		try:
 			my_path = os.path.dirname(os.path.realpath(__file__))
-			with open(os.path.join(os.path.join(my_path,"config"),"seatbelt_config.json")) as config:
+			with open(os.path.join(os.path.join(my_path,"config"),"donpapi_config.json")) as config:
 				config_parser = json.load(config)
 				#Gérer les chemins Win vs Linux pour le .replace('\\', '/')
 				mycss = os.path.join(my_path, config_parser['css']).replace('\\', '/')
@@ -84,6 +84,7 @@ class reporting:
 			<body onload="toggleAll()">
 			\n""" % ('res/style.css', "[client_name]")
 		self.add_to_resultpage(data)
+
 
 		# Tableau en top de page pour les liens ?
 		data = """<table class="statistics"><TR><Th><a class="firstletter">M</a><a>enu</A></Th></TR>\n"""
@@ -149,7 +150,23 @@ class reporting:
 		toggle_it("VNC");
 		toggle_it("MRemoteNG");
 		}
-  		</script>
+		
+		function CopyToClipboard(data_to_copy) {
+		const dummy = document.createElement('textarea');
+		dummy.style.position = 'absolute';
+		dummy.style.left = '-9999px';
+		dummy.style.top = '-9999px';
+		document.body.appendChild(dummy);
+		dummy.value = data_to_copy;
+		dummy.select();
+		document.execCommand('copy');
+		document.body.removeChild(dummy);
+		// Copy the text inside the text field
+		//navigator.clipboard.writeText(data_to_copy);
+		//alert("Copied the text: " + data_to_copy);
+		}
+		</script>
+		
 		"""
 		self.add_to_resultpage(data)
 
@@ -329,61 +346,108 @@ class reporting:
 			# <a href="#" id="toggle" onClick="toggle_it('tr1');toggle_it('tr2')">
 			current_type = 'cookies'
 			data += f"""<TR id=cookies><TD colspan="7" class="toggle_menu" onClick="toggle_it('cookies')"><A>Cookies ({len(results)})</A></TD></TR>"""
-			for index, cred in enumerate(results):
-				name,value,expires_utc,target,type,pillaged_from_computerid,pillaged_from_userid = cred
-				# Skip infos of
-				# Get computer infos
-				res = self.get_computer_infos(pillaged_from_computerid)
-				for index_, res2 in enumerate(res):
-					ip, hostname = res2
-				computer_info = f"{ip} | {hostname}"
-				# pillaged_from_userid
-				if pillaged_from_userid != None:
-					res = self.get_user_infos(pillaged_from_userid)
-					for index_, pillaged_username in enumerate(res):
-						pillaged_from_userid = pillaged_username[0]
-				else:
-					pillaged_from_userid = str(pillaged_from_userid)
-
-				if index % 2 == 0:
-					data += f"""<TR class=tableau_resultat_row0 {current_type}=1>"""
-				else:
-					data += f"""<TR class=tableau_resultat_row1 {current_type}=1>"""
-
-				special_style = ""
-
-				###Print block
-				for info in [name,value]:
-					data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
-				for info in [expires_utc]: #Formule a change si on intègre des cookies venant d'autre chose que chrome
-					try:
-						if type == "browser-chrome" :
-							data += f"""<TD {special_style} ><A title="{info}"> {(datetime(1601, 1, 1) + timedelta(microseconds=info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
+			previous_target = ''
+			previous_userid = ''
+			previous_computerid = ''
+			temp_cookie=''
+			temp = []
+			groupindex=0
+			for index_, cred_ in enumerate(results):
+				name_,value_,expires_utc,target,type,pillaged_from_computerid,pillaged_from_userid = cred_
+				if target == previous_target and pillaged_from_userid == previous_userid and pillaged_from_computerid == previous_computerid :
+					temp.append((index_,cred_))
+					if value_ != '':
+						temp_cookie=f"{temp_cookie}\\ndocument.cookie=\\'{name_}={value_}\\'"
+					rendering = False
+				else :
+					rendering = True
+					previous_target=target
+					previous_computerid = pillaged_from_computerid
+					previous_userid = pillaged_from_userid
+				if rendering == True or index_ == (len(results)-1):
+					groupindex += 1
+					for index,cred in temp:
+						name, value, expires_utc, target, type, pillaged_from_computerid, pillaged_from_userid = cred
+						# Skip infos of
+						self.logging.debug(
+							f" analysing cookie  {bcolors.WARNING}  {name} {value} {type} {target} UTC:{expires_utc} {bcolors.ENDC}")
+						try :
+							if value == '' :
+								continue
+							if (type == "browser-chrome" and (expires_utc != 0) and (datetime(1601, 1, 1) + timedelta(microseconds=expires_utc)) < datetime.today()) or (type != "browser-chrome" and datetime.fromtimestamp(expires_utc) < datetime.today()) :
+								self.logging.debug(
+									f" Skipping old cookie  {bcolors.WARNING}  {name} {value} {type} {target} {expires_utc} {bcolors.ENDC}")
+								continue
+						#####
+						except Exception as ex:
+							self.logging.debug(
+								f" Exception {bcolors.WARNING} Exception in Cookie  {name} {value} {type} {target} {expires_utc} {bcolors.ENDC}")
+							self.logging.debug(ex)
+							continue
+						# Get computer infos
+						res = self.get_computer_infos(pillaged_from_computerid)
+						for index_, res2 in enumerate(res):
+							ip, hostname = res2
+						computer_info = f"{ip} | {hostname}"
+						# pillaged_from_userid
+						if pillaged_from_userid != None:
+							res = self.get_user_infos(pillaged_from_userid)
+							for index_, pillaged_username in enumerate(res):
+								pillaged_from_userid = pillaged_username[0]
 						else:
-							data += f"""<TD {special_style} ><A title="{info}"> {(datetime.fromtimestamp(info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
-					except:
-						data += f"""<TD {special_style} ><A title="{info}"> {info} </A></TD>"""
+							pillaged_from_userid = str(pillaged_from_userid)
 
-				# check if info contains a URL
-				if 'http:' in target or 'https:' in target:
-					info2 = target[target.index('http'):]
-					special_ref = f'''href="{info2}" target="_blank" title="{target}"'''
-				elif 'ftp:' in target:
-					info2 = target[target.index('ftp'):]
-					special_ref = f'''href="{info2}" target="_blank" title="{target}"'''
-				elif "Domain:target=" in target:
-					info2 = f'''rdp://full%20address=s:{target[target.index('Domain:target=') + len('Domain:target='):]}:3389&username=s:{username}&audiomode=i:2&disable%20themes=i:1'''
-					special_ref = f'''href="{info2}" title="{target}"'''
-				elif "LegacyGeneric:target=MicrosoftOffice1" in target:
-					target = f'''{target[target.index('LegacyGeneric:target=') + len('LegacyGeneric:target='):]}'''
-					special_ref = f'''href="https://login.microsoftonline.com/" target="_blank" title="OfficeLogin"'''
-				else:
-					special_ref = f'''title="{target}"'''
-				data += f"""<TD {special_style} ><A {special_ref}> {str(target)[:48]} </A></TD>"""
+						if groupindex % 2 == 0:
+							data += f"""<TR class=tableau_resultat_row0 {current_type}=1>"""
+						else:
+							data += f"""<TR class=tableau_resultat_row1 {current_type}=1>"""
 
-				for info in [type, computer_info, pillaged_from_userid]:
-					data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
-				data += """</TR>\n"""
+
+
+						###Print block
+						if name.lower() in ['estsauthpersistant','estsauth','sid','aws-userinfo','aws-credz','osid','hsid','ssid','apisid','sapisid','lsid','sub_session_onelogin','sub_session_onelogin.com','user_session']:
+							special_style = '''class="cracked"'''
+						else :
+							special_style = ""
+
+						### On supprime les cookies expirés
+							for info in [name,value]:
+								data += f"""<TD {special_style} onClick="CopyToClipboard('{temp_cookie}')"><A title="{info}" > {str(info)[:48]} </A></TD>"""
+							for info in [expires_utc]: #Formule a change si on intègre des cookies venant d'autre chose que chrome
+								try:
+									if type == "browser-chrome" :
+										data += f"""<TD {special_style} ><A title="{info}"> {(datetime(1601, 1, 1) + timedelta(microseconds=info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
+									else:
+										data += f"""<TD {special_style} ><A title="{info}"> {(datetime.fromtimestamp(info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
+								except:
+									data += f"""<TD {special_style} ><A title="{info}"> {info} </A></TD>"""
+
+							# check for known providers
+							if '.microsoftonline.com' in target :
+								special_ref = f'''href="https://myaccount.microsoft.com/?ref=MeControl" target="_blank" title="{target}"'''
+							elif '.okta.com' in target: #should be yourdomain.okta.com
+								special_ref = f'''href="https://{target}" target="_blank" title="{target}"'''
+							elif ".google.com" in target:
+								special_ref = f'''href="https://console.cloud.google.com/" title="{target}"'''
+							elif ".amazon.com" in target:
+								special_ref = f'''href="https://console.aws.amazon.com/" title="{target}"'''
+							elif ".onelogin.com" in target:
+								special_ref = f'''href="https://app.onelogin.com/login" title="{target}"'''
+							elif ".github.com" in target:
+								special_ref = f'''href="https://github.com/login" title="{target}"'''
+
+							else:
+								special_ref = f'''title="{target}"'''
+							data += f"""<TD {special_style} ><A {special_ref}> {str(target)[:48]} </A></TD>"""
+
+							for info in [type, computer_info, pillaged_from_userid]:
+								data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
+							data += """</TR>\n"""
+
+
+					temp=[]
+					temp.append((index_, cred_))
+					temp_cookie=f"document.cookie=\\'{name_}={value_}\\'"
 
 			data += """</TABLE><BR>"""
 			self.add_to_resultpage(data)
@@ -785,7 +849,7 @@ class reporting:
 	def get_cookies(self):
 		with self.conn:
 			cur = self.conn.cursor()
-			cur.execute(f"SELECT name,value,expires_utc,target,type,pillaged_from_computerid,pillaged_from_userid  FROM cookies ORDER BY pillaged_from_computerid ASC, expires_utc DESC ")
+			cur.execute(f"SELECT name,value,expires_utc,target,type,pillaged_from_computerid,pillaged_from_userid  FROM cookies ORDER BY pillaged_from_computerid ASC, pillaged_from_userid ASC, target ASC, expires_utc DESC ")
 			results = cur.fetchall()
 		return results
 

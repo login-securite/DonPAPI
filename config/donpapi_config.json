@@ -1,7 +1,7 @@
 {
 	"workspace":"default",
-	"db_path":"seatbelt.db",
-	"db_name":"seatbelt.db",
+	"db_path":"donpapi.db",
+	"db_name":"donpapi.db",
 	"css":"res\\css\\style.css",
 	"mychartjs":"res\\css\\Chart.js",
 	"logo_login": "res\\Logo_LOGIN.PNG",

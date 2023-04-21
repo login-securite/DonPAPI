@@ -211,7 +211,7 @@ def main():
 
 def load_configs(options):
 	seatbelt_path = os.path.dirname(os.path.realpath(__file__))
-	config_file=os.path.join(os.path.join(seatbelt_path,"config"),"seatbelt_config.json")
+	config_file=os.path.join(os.path.join(seatbelt_path,"config"),"donpapi_config.json")
 	with open(config_file,'rb') as config:
 		config_parser = json.load(config)
 		options.db_path=config_parser['db_path']
