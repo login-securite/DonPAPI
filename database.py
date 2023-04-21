@@ -89,7 +89,7 @@ class reporting:
 		# Tableau en top de page pour les liens ?
 		data = """<table class="statistics"><TR><Th><a class="firstletter">M</a><a>enu</A></Th></TR>\n"""
 		data = """<div class="navbar">\n"""
-		for menu in ['wifi', 'taskscheduler', 'credential-blob', 'browser-internet_explorer', 'cookies', 'SAM', 'LSA', 'DCC2',
+		for menu in ['wifi', 'taskscheduler', 'credential-blob', 'certificates', 'browser-internet_explorer', 'cookies', 'SAM', 'LSA', 'DCC2',
 		             'Files', 'Connected-users', 'Local_account_reuse', 'Scope_Audited']:
 			# data += f"""<TR><TD class="menu_top"><BR><a href="#{menu}"> {menu} </A><BR></TD></TR>\n"""
 			data += f"""<a href="#{menu}"> {menu.upper()}</A>\n"""
@@ -113,8 +113,6 @@ class reporting:
 		#JS Stuff
 		data = """
 		<script>
-		function 
-
 		function toggle_by_class(cls, on) {
 	    	var lst = document.getElementsByClassName(cls);
     		for(var i = 0; i < lst.length; ++i) {
@@ -324,8 +322,14 @@ class reporting:
 				special_style = ""
 
 				###Print block
-				for info in [issuer, subject ,computer_info, pillaged_from_userid, client_auth]:
+				for info in [issuer, subject ,computer_info, pillaged_from_userid]:
 					data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
+				for info in [client_auth]:
+					if client_auth:
+						cmd = f"certipy auth -pfx {os.path.join(os.getcwd(),pfx_filepath)}"
+						data += f"""<TD {special_style} onClick="CopyToClipboard('{cmd}')"><A title="{cmd}">Yes</A></TD>"""
+					else:
+						data += f"""<TD {special_style} ><A title="No">No</A></TD>"""
 				data += """</TR>\n"""
 			data += """</TABLE><BR>"""
 			self.add_to_resultpage(data)
