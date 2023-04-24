@@ -14,7 +14,9 @@ classifiers = [
     'Topic :: Security',
 ]
 packages = [
-    { include = "lib", from = "." }
+    { include = "lib", from = "." },
+    { include = "software", from = "." },
+    { include = "lazagne", from = "." },
 ]
 
 [tool.poetry.scripts]
@@ -28,6 +30,7 @@ LnkParse3 = "^1.2.0"
 wheel = "^0.37.0"
 M2Crypto = "^0.38.0"
 pycryptodome = "^3.11.0"
+swig = "^4.1.1"
 
 [tool.poetry.dev-dependencies]
 

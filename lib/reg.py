@@ -211,27 +211,27 @@ class RegHandler:
             raise Exception('Error hBaseRegOpenKey 2')
 
         if self.__options.v:
-            print(keyName)
+            # print(keyName)
             value = rrp.hBaseRegQueryValue(dce, ans2['phkResult'], self.__options.v)
-            print('\t' + self.__options.v + '\t' + self.__regValues.get(value[0], 'KEY_NOT_FOUND') + '\t',
-                  str(value[1]))
+            # print('\t' + self.__options.v + '\t' + self.__regValues.get(value[0], 'KEY_NOT_FOUND') + '\t',
+                #   str(value[1]))
             return value
         elif self.__options.ve:
-            print(keyName)
+            # print(keyName)
             value = rrp.hBaseRegQueryValue(dce, ans2['phkResult'], '')
-            print('\t' + '(Default)' + '\t' + self.__regValues.get(value[0], 'KEY_NOT_FOUND') + '\t', str(value[1]))
+            # print('\t' + '(Default)' + '\t' + self.__regValues.get(value[0], 'KEY_NOT_FOUND') + '\t', str(value[1]))
             return value
         elif self.__options.s:
             self.__print_all_subkeys_and_entries(dce, subKey + '\\', ans2['phkResult'], 0)
         else:
-            print(keyName)
+            # print(keyName)
             self.__print_key_values(dce, ans2['phkResult'])
             values=[]
             i = 0
             while True:
                 try:
                     key = rrp.hBaseRegEnumKey(dce, ans2['phkResult'], i)
-                    print(keyName + '\\' + key['lpNameOut'][:-1])
+                    # print(keyName + '\\' + key['lpNameOut'][:-1])
                     values.append(f"{keyName}\\{key['lpNameOut'][:-1]}")
                     i += 1
                 except Exception as e:
@@ -249,7 +249,7 @@ class RegHandler:
                     lp_value_name = '(Default)'
                 lp_type = ans4['lpType']
                 lp_data = b''.join(ans4['lpData'])
-                print('\t' + lp_value_name + '\t' + self.__regValues.get(lp_type, 'KEY_NOT_FOUND') + '\t', end=' ')
+                # print('\t' + lp_value_name + '\t' + self.__regValues.get(lp_type, 'KEY_NOT_FOUND') + '\t', end=' ')
                 self.__parse_lp_data(lp_type, lp_data)
                 i += 1
             except rrp.DCERPCSessionError as e:
@@ -265,7 +265,7 @@ class RegHandler:
                 ans = rrp.hBaseRegOpenKey(rpc, keyHandler, subkey['lpNameOut'],
                                           samDesired=rrp.MAXIMUM_ALLOWED | rrp.KEY_ENUMERATE_SUB_KEYS)
                 newKeyName = keyName + subkey['lpNameOut'][:-1] + '\\'
-                print(newKeyName)
+                # print(newKeyName)
                 self.__print_key_values(rpc, ans['phkResult'])
                 self.__print_all_subkeys_and_entries(rpc, newKeyName, ans['phkResult'], 0)
             except rrp.DCERPCSessionError as e:

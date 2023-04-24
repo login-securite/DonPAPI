@@ -26,7 +26,7 @@ class reporting:
 			self.logging.debug(ex)
 			return False
 
-	def generate_report(self,type='', user='', target='',report_content=['credz','cookies','files','connected_user','hash_reuse','audited_scope','masterkeys'],credz_content=['wifi', 'taskscheduler', 'credential-blob', 'browser', 'sysadmin','SAM', 'LSA', 'DCC2'],report_file=""):
+	def generate_report(self,type='', user='', target='',report_content=['credz','certificates','cookies','files','connected_user','hash_reuse','audited_scope','masterkeys'],credz_content=['wifi', 'taskscheduler', 'credential-blob', 'browser', 'sysadmin','SAM', 'LSA', 'DCC2'],report_file=""):
 
 		try:
 			my_path = os.path.dirname(os.path.realpath(__file__))
@@ -89,7 +89,7 @@ class reporting:
 		# Tableau en top de page pour les liens ?
 		data = """<table class="statistics"><TR><Th><a class="firstletter">M</a><a>enu</A></Th></TR>\n"""
 		data = """<div class="navbar">\n"""
-		for menu in ['wifi', 'taskscheduler', 'credential-blob', 'browser-internet_explorer', 'cookies', 'SAM', 'LSA', 'DCC2',
+		for menu in ['wifi', 'taskscheduler', 'credential-blob', 'certificates', 'browser-internet_explorer', 'cookies', 'SAM', 'LSA', 'DCC2',
 		             'Files', 'Connected-users', 'Local_account_reuse', 'Scope_Audited']:
 			# data += f"""<TR><TD class="menu_top"><BR><a href="#{menu}"> {menu} </A><BR></TD></TR>\n"""
 			data += f"""<a href="#{menu}"> {menu.upper()}</A>\n"""
@@ -287,6 +287,52 @@ class reporting:
 			self.add_to_resultpage(data)
 			###
 
+		if 'certificates' in report_content:
+			results = self.get_certificates()
+
+			data = """
+					<table class="statistics"><TR>
+					<Th style="text-align: center"><a class="firstletter">I</a><a>ssuer</A></Th>
+					<Th style="text-align: center"><a class="firstletter">S</a><a>ubject</A></Th>
+					<Th style="text-align: center"><a class="firstletter">P</a><a>illaged from</A></Th>
+					<Th style="text-align: center"><a class="firstletter">P</a><a>illaged with</A></Th>
+					<Th style="text-align: center"><a class="firstletter">C</a><a>lient auth</A></Th></TR>\n
+					"""
+
+			current_type = 'certificates'
+			data += f"""<TR id=certificates><TD colspan="6" class="toggle_menu" onClick="toggle_it('certificates')"><A>Certificates ({len(results)})</A></TD></TR>"""
+			for index, cred in enumerate(results):
+				_, pfx_filepath, guid, issuer, subject, client_auth, pillaged_from_computerid, pillaged_from_userid = cred
+				res = self.get_computer_infos(pillaged_from_computerid)
+				for _, res2 in enumerate(res):
+					ip, hostname = res2
+				computer_info = f"{ip} | {hostname}"
+				if pillaged_from_userid != None:
+					res = self.get_user_infos(pillaged_from_userid)
+					for _, pillaged_username in enumerate(res):
+						pillaged_from_userid = pillaged_username[0]
+				else:
+					pillaged_from_userid = str(pillaged_from_userid)
+
+				if index % 2 == 0:
+					data += f"""<TR class=tableau_resultat_row0 {current_type}=1>"""
+				else:
+					data += f"""<TR class=tableau_resultat_row1 {current_type}=1>"""
+
+				special_style = ""
+
+				###Print block
+				for info in [issuer, subject ,computer_info, pillaged_from_userid]:
+					data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
+				for info in [client_auth]:
+					if client_auth:
+						cmd = f"certipy auth -pfx {os.path.join(os.getcwd(),pfx_filepath)}"
+						data += f"""<TD {special_style} onClick="CopyToClipboard('{cmd}')"><A title="{cmd}">Yes</A></TD>"""
+					else:
+						data += f"""<TD {special_style} ><A title="No">No</A></TD>"""
+				data += """</TR>\n"""
+			data += """</TABLE><BR>"""
+			self.add_to_resultpage(data)
 
 		##### List cookies
 		if 'cookies' in report_content:
@@ -683,6 +729,21 @@ class reporting:
 			cur.execute(f"SELECT count(id) FROM credz WHERE LOWER(type)=LOWER('{current_type}') {extra_conditions}")
 			results = cur.fetchall()
 		return results
+	
+	def get_certificates(self, distinct=False):
+		"""
+		Return certificates from db
+		"""		
+		if distinct :
+			with self.conn:
+				cur = self.conn.cursor()
+				cur.execute("SELECT DISTINCT subject,issuer,guid FROM certificates ORDER BY subject DESC, (case when client_auth then 1 else 2 end) asc")
+		else:
+			with self.conn:
+				cur = self.conn.cursor()
+				cur.execute("SELECT * FROM certificates ORDER BY subject DESC, (case when client_auth then 1 else 2 end) asc")
+		results = cur.fetchall()
+		return results
 
 	def get_credz(self, filterTerm=None, credz_type=None,distinct=False,distinct_sam=False):
 		"""
@@ -875,6 +936,19 @@ class database:
 					"password" text,
 					"target" text,
 					"type" text,
+					"pillaged_from_computerid" integer,
+					"pillaged_from_userid" integer,
+					FOREIGN KEY(pillaged_from_computerid) REFERENCES computers(id),
+					FOREIGN KEY(pillaged_from_userid) REFERENCES users(id)
+					)''')
+		
+		db_conn.execute('''CREATE TABLE "certificates" (
+					"id" integer PRIMARY KEY,
+					"pfx_file_path" text,
+					"guid" text,
+					"issuer" text,
+					"subject" text,
+					"client_auth" bool,
 					"pillaged_from_computerid" integer,
 					"pillaged_from_userid" integer,
 					FOREIGN KEY(pillaged_from_computerid) REFERENCES computers(id),
@@ -1296,6 +1370,121 @@ class database:
 			data = ''
 		result = data.replace('\x00','')
 		return result
+
+	def add_certificate(self, guid, pfx_file_path, issuer, subject, client_auth, pillaged_from_computerid=None,pillaged_from_userid=None,pillaged_from_computer_ip=None,pillaged_from_username=None):
+		"""
+		Check if this cert has already been added to db, if not then add it
+		"""
+		user_rowid=None
+		try:
+			guid = self.clear_input(guid)
+			pfx_file_path = self.clear_input(pfx_file_path)
+			issuer = self.clear_input(issuer)
+			subject = self.clear_input(subject)
+			self.logging.debug(f"{guid} - {binascii.hexlify(guid.encode('utf-8'))}")
+			self.logging.debug(f"{issuer} - {binascii.hexlify(issuer.encode('utf-8'))}")
+			self.logging.debug(f"{subject} - {binascii.hexlify(subject.encode('utf-8'))}")
+			self.logging.debug(f"{client_auth}")
+			self.logging.debug(f"{pfx_file_path} - {binascii.hexlify(pfx_file_path.encode('utf-8'))}")
+			self.logging.debug(f"pillaged_from_computer_ip {pillaged_from_computer_ip} - {binascii.hexlify(pillaged_from_computer_ip.encode('utf-8'))}")
+			self.logging.debug(f"pillaged_from_username {pillaged_from_username}")
+
+			if pillaged_from_computer_ip != None:
+				with self.conn:
+					cur = self.conn.cursor()
+					cur.execute(f"SELECT * FROM computers WHERE LOWER(ip)=LOWER('{pillaged_from_computer_ip}')")
+				results = cur.fetchall()
+				if len(results)>0:
+					result=results[0]
+					pillaged_from_computerid=result[0]
+					self.logging.debug(f"[+] Resolved {pillaged_from_computer_ip} to id : {pillaged_from_computerid}")
+		except Exception as ex:
+			self.logging.error(f"Exception in add_certificate 1")
+			self.logging.debug(ex)
+
+		try:
+			if pillaged_from_username != None:
+				with self.conn:
+					cur = self.conn.cursor()
+					cur.execute(f"SELECT * FROM users WHERE LOWER(username)=LOWER('{pillaged_from_username}') AND pillaged_from_computerid={pillaged_from_computerid}")
+				results = cur.fetchall()
+				if len(results) > 0:
+					result = results[0]
+					pillaged_from_userid = result[0]
+					self.logging.debug(f"[+] Resolved {pillaged_from_username} on machine {pillaged_from_computerid} to id : {pillaged_from_userid}")
+		except Exception as ex:
+			self.logging.error(f"Exception in add_certificate 2")
+			self.logging.debug(ex)
+			pass
+		if pillaged_from_computerid == None or pillaged_from_userid == None :
+			self.logging.debug(f"[-] Missing computerId or UserId to register Certificate {pillaged_from_username} {pfx_file_path}")
+			#return None
+		
+		try:
+			if pillaged_from_userid == None :
+				query = "SELECT * FROM certificates WHERE LOWER(guid)=LOWER(:guid) AND LOWER(subject)=LOWER(:subject) AND LOWER(issuer)=LOWER(:issuer) AND pillaged_from_computerid=:pillaged_from_computerid"
+				parameters = {
+					"guid": guid,
+					"subject": subject,
+					"issuer": issuer,
+					"pillaged_from_computerid": int(pillaged_from_computerid),
+				}
+			else:
+				query = "SELECT * FROM certificates WHERE LOWER(guid)=LOWER(:guid) AND LOWER(subject)=LOWER(:subject) AND LOWER(issuer)=LOWER(:issuer) AND pillaged_from_computerid=:pillaged_from_computerid AND pillaged_from_userid=:pillaged_from_userid"
+				parameters = {
+					"guid": guid,
+					"subject": subject,
+					"issuer": issuer,
+					"pillaged_from_computerid": int(pillaged_from_computerid),
+					"pillaged_from_computerid": int(pillaged_from_computerid),
+					"pillaged_from_userid": int(pillaged_from_userid)
+				}
+			self.logging.debug(query)
+			with self.conn:
+				cur = self.conn.cursor()
+				cur.execute(query, parameters)
+			results = cur.fetchall()
+		except Exception as ex:
+			self.logging.error(f"Exception in add_certificate 3")
+			self.logging.debug(ex)
+
+		try:
+			if not result or not len(results):
+				if pillaged_from_userid == None:
+					query = "INSERT INTO certificates (pfx_file_path, guid, issuer, subject, client_auth, pillaged_from_computerid) VALUES (:pfx_file_path, :guid, :issuer, :subject, :client_auth, :pillaged_from_computerid)"
+					parameters = {
+						"pfx_file_path": pfx_file_path,
+						"guid": guid,
+						"issuer": issuer,
+						"subject": subject,
+						"client_auth": client_auth,
+						"pillaged_from_computerid": int(pillaged_from_computerid),
+					}
+				else:
+					query = "INSERT INTO certificates (pfx_file_path, guid, issuer, subject, client_auth, pillaged_from_computerid, pillaged_from_userid) VALUES (:pfx_file_path, :guid, :issuer, :subject, :client_auth, :pillaged_from_computerid, :pillaged_from_userid)"
+					parameters = {
+						"pfx_file_path": pfx_file_path,
+						"guid": guid,
+						"issuer": issuer,
+						"subject": subject,
+						"client_auth": client_auth,
+						"pillaged_from_computerid": int(pillaged_from_computerid),
+						"pillaged_from_userid": int(pillaged_from_userid),
+					}
+				self.logging.debug(query)
+				with self.conn:
+					cur = self.conn.cursor()
+					cur.execute(query, parameters)
+				user_rowid = cur.lastrowid
+				self.logging.debug(
+					f'added_certificate(guid={guid}, issuer={issuer}, subject={subject}, client_auth={client_auth}) => {user_rowid}')
+			else:
+				self.logging.debug(
+					f'added_certificate(guid={guid}, issuer={issuer}, subject={subject}, client_auth={client_auth}) => ALREADY IN DB')
+
+		except Exception as ex:
+			self.logging.error(f"Exception in add_certificates 4")
+			self.logging.debug(ex)
 
 	def add_credz(self, credz_type, credz_username, credz_password, credz_target, credz_path , pillaged_from_computerid=None,pillaged_from_userid=None,pillaged_from_computer_ip=None,pillaged_from_username=None):
 		"""

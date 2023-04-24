@@ -18,7 +18,8 @@ We aim at locating those "secured" credentials, and retrieve them using :
 
 - Windows credentials (Taskscheduled credentials & a lot more)
 - Windows Vaults
-- Windows RDP credentials 
+- Windows RDP credentials
+- Windows certificates
 - AdConnect (still require a manual operation)
 - Wifi key
 - Internet explorer Credentials
@@ -119,6 +120,7 @@ Target can be an IP, IP range, CIDR, FQDN, file containing list targets (one per
 ## Reports & raw data
 DonPapi will extract and consolidate a bunch of raw information 
 - raw user and passwords in 'raw_credz' 
+- dumped certificates informations
 - raw cookies 
 - raw sam hash
 - raw users masterkey's hash (Good luck with cracking those, but it might be the only hash you'll get for some SuperAdmin Accounts)
@@ -127,6 +129,8 @@ DonPapi will extract and consolidate a bunch of raw information
 HTML Reports will be created, as you'll probably have so many passwords that your browser will crash rendering it, i tried to separate those in few reports.
 
 Cookies are great to bypass MFA, by clicking on a cookie in the report you'll copy what you need to paste to cookie in your browser dev console.
+
+If the certificate allow client authentication, you can click on "Yes" to get a working `certipy auth` command with the certificate in your clipboard.
 
 some info are excluded from the reports, you can still acces all the data in the sqlite3 donpapi.db database.
 
@@ -168,7 +172,6 @@ All the credits goes to these great guys for doing the hard research & coding :
 
 - Finish ADSync/ADConnect password extraction
 - CREDHISTORY full extraction
-- Extract windows Certificates
 - Further analysis ADAL/msteams
 - Implement Chrome <v80 decoder
 - Find a way to implement Lazagne's great modules
