@@ -350,7 +350,7 @@ class reporting:
 
 			# <a href="#" id="toggle" onClick="toggle_it('tr1');toggle_it('tr2')">
 			current_type = 'cookies'
-			data += f"""<TR id=cookies><TD colspan="8" class="toggle_menu" onClick="toggle_it('cookies')"><A>Cookies ({len([results])})</A></TD></TR>"""
+			data += f"""<TR id=cookies><TD colspan="8" class="toggle_menu" onClick="toggle_it('cookies')"><A>Cookies ({len(results)})</A></TD></TR>"""
 			previous_target = ''
 			previous_userid = ''
 			previous_computerid = ''
