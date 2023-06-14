@@ -7,20 +7,21 @@ readme = "readme.md"
 homepage = "https://github.com/login-securite/DonPAPI"
 repository = "https://github.com/login-securite/DonPAPI"
 exclude = []
-include = ["config/*", "lazagne/*", "lib/*", "software/*", "*.py"]
+include = ["donpapi/config/*", "donpapi/res/*"]
 classifiers = [
     'Environment :: Console',
     'Programming Language :: Python :: 3',
     'Topic :: Security',
 ]
 packages = [
-    { include = "lib", from = "." },
-    { include = "software", from = "." },
-    { include = "lazagne", from = "." },
+    { include = "donpapi"},
+    { include = "donpapi/lib"},
+    { include = "donpapi/software"},
+    { include = "donpapi/lazagne"},
 ]
 
 [tool.poetry.scripts]
-donpapi = 'DonPAPI:main'
+DonPAPI = 'donpapi.entry:main'
 
 [tool.poetry.dependencies]
 python = "^3.9"

