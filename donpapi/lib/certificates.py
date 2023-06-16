@@ -315,8 +315,11 @@ class CertificatesTriage():
             full_path = os.path.join(filedest,filename)
             self.logging.info(f"[{self.options.target_ip}] {bcolors.OKGREEN}[+] Found certificate for user {cert.user.username}. Writing it to {full_path}{bcolors.ENDC}")
             cert.dump()
-            with open(full_path, "wb") as f:
-                f.write(cert.pfx)
+            try:
+                with open(full_path, "wb") as f:
+                    f.write(cert.pfx)
+            except Exception as e:
+                pass
             self.db.add_certificate(guid=cert.filename, pfx_file_path=full_path, issuer=str(cert.cert.issuer.rfc4514_string()), subject=str(cert.cert.subject.rfc4514_string()), client_auth=cert.clientauth, pillaged_from_computer_ip=self.options.target_ip, pillaged_from_username=cert.user.username)
         for user in self.users:
             if user.username == 'MACHINE$':
@@ -583,10 +586,6 @@ class CertificatesTriage():
                         self.logging.debug(
                             f"[{self.options.target_ip}] Exception {bcolors.WARNING} MACHINE-Key from LSA {key.decode('utf-8')} can't decode {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Masterkey {guid}{bcolors.ENDC}")
                         self.logging.debug(ex)
-                else:
-                    if user.type_validated == False:
-                        self.decrypt_masterkey(user, guid, type='MACHINE-USER')
-
             elif type == 'MACHINE-USER':
                 # Try de decrypt masterkey file
                 for key in self.user_key:
