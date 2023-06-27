@@ -1474,15 +1474,16 @@ class LSASecrets(OfflineRegistry):
             else:
                 # We have to get the account the service
                 # runs under
+                secret = "%s#" % upperName
                 if hasattr(self.__remoteOps, 'getServiceAccount'):
                     account = self.__remoteOps.getServiceAccount(name[4:])
                     if account is None:
-                        secret = self.UNKNOWN_USER + ':'
+                        secret += self.UNKNOWN_USER + ':'
                     else:
-                        secret =  "%s:" % account
+                        secret +=  "%s:" % account
                 else:
                     # We don't support getting this info for local targets at the moment
-                    secret = self.UNKNOWN_USER + ':'
+                    secret += self.UNKNOWN_USER + ':'
                 secret += strDecoded
         elif upperName.startswith('DEFAULTPASSWORD'):
             # defaults password for winlogon
@@ -1496,12 +1497,12 @@ class LSASecrets(OfflineRegistry):
                 if hasattr(self.__remoteOps, 'getDefaultLoginAccount'):
                     account = self.__remoteOps.getDefaultLoginAccount()
                     if account is None:
-                        secret = self.UNKNOWN_USER + ':'
+                        secret = 'winlogon#' + self.UNKNOWN_USER + ':'
                     else:
-                        secret = "%s:" % account
+                        secret = "winlogon#%s:" % account
                 else:
                     # We don't support getting this info for local targets at the moment
-                    secret = self.UNKNOWN_USER + ':'
+                    secret = 'winlogon#' + self.UNKNOWN_USER + ':'
                 secret += strDecoded
         elif upperName.startswith('ASPNET_WP_PASSWORD'):
             try:

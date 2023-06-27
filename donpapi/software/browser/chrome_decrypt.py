@@ -10,6 +10,7 @@ class CHROME_LOGINS:
 		self.localstate_path = None
 		self.localstate_dpapi = None
 		self.cookie_path = None
+		self.version_path = None
 		self.options = options
 		self.logging= logger
 		self.username = username
@@ -19,6 +20,7 @@ class CHROME_LOGINS:
 		self.logins = {}
 		self.cookies = {}
 		self.db=db
+		self.version=''
 
 	def get_masterkey_guid_from_localstate(self):
 		try:
@@ -190,3 +192,26 @@ class CHROME_LOGINS:
 			return None
 
 		return self.cookies
+
+
+	def get_chrome_Version(self):
+		try:
+			if self.version_path!=None:
+				self.logging.debug(f"[{self.options.target_ip}] [+] Getting Chrome version in {self.version_path}")
+
+				if os.path.isfile(self.version_path):
+					f=open(self.version_path,'rb')
+					self.version = f.read().decode('utf8')
+					f.close()
+					self.db.add_browser_version(browser_type='browser-chrome',
+						                  version=self.version,
+						                  pillaged_from_computer_ip=self.options.target_ip,
+						                  pillaged_from_username=self.username)
+					self.logging.info(f"[{self.options.target_ip}] [+]  {bcolors.OKGREEN}[Chrome Version] {bcolors.ENDC}  {bcolors.OKBLUE}{self.version} {bcolors.ENDC}")
+
+		except Exception as ex:
+			self.logging.debug(
+				f"[{self.options.target_ip}] {bcolors.WARNING}Exception Getting Blob for Chrome{bcolors.ENDC}")
+			self.logging.debug(ex)
+
+		return self.version

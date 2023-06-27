@@ -203,11 +203,11 @@ class MyRegOps():
 				self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception get_reg_value {bcolors.ENDC}")
 				self.logging.debug(ex)
 
-	def get_reg_list(self,reg_path):
+	def get_reg_list(self,reg_path,with_sub=True):
 		try:
 			#self.myRegHandler.__options.action='QUERY'
 			self.options.keyName = reg_path
-			self.options.s = True #__print_all_subkeys_and_entries
+			self.options.s = with_sub #__print_all_subkeys_and_entries
 			self.options.v = False
 			self.options.ve = False
 			self.reg_init()

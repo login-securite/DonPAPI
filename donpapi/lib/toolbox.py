@@ -2,7 +2,7 @@
 # coding:utf-8
 import re, os, ipaddress
 import logging
-
+from impacket.structure import pretty_print
 
 ipv4_re=r'^(?:[0-9,\-]{1,}\.){3}[0-9,\-]{1,}$'
 def split_targets(target: str):
@@ -75,3 +75,63 @@ class bcolors:
 	ENDC = '\033[0m'
 	BOLD = '\033[1m'
 	UNDERLINE = '\033[4m'
+
+def reg_parser(data,logging,remote_data):
+	basereg='\\'
+	for line in data:
+		try:
+			if not '\t' in line:
+				basereg = line
+			else:
+				values = line.split('\t')
+				logging.debug(f"[{basereg}{values[0]}] : {values[1]} -> {values[2]} ")
+				remote_data[f"{basereg}{values[0]}"] = [f"{values[1]}", f"{values[2]}"]
+		except :
+			continue
+
+def reg_finder(entry=None, type=None, value=None,logging='',remote_data=[]):
+	res = []
+	# Search per KeyName
+	if entry != None:
+		for _entry in remote_data:
+			if entry in _entry:
+				res.append(_entry)
+	elif value != None:
+		# Search per KeyValue
+		for _entry in remote_data:
+			if value in remote_data[_entry][1]:
+				if type == None or type == remote_data[_entry][0]:
+					res.append(_entry)
+	return res
+
+
+def hexdump(data, indent = '\t'):
+	try:
+		result = ''
+		if data is None:
+			return result
+		if isinstance(data, int):
+			data = str(data).encode('utf-8')
+		if data[:2]=="b'":
+			x=data[2:-1].encode()
+		else:
+			x=bytearray(data)
+		strLen = len(x)
+		i = 0
+		while i < strLen:
+			line = " %s%04x   " % (indent, i)
+			for j in range(16):
+				if i+j < strLen:
+					line += "%02X " % x[i+j]
+				else:
+					line += u"   "
+				if j%16 == 7:
+					line += " "
+			line += "  "
+			line += ''.join(pretty_print(x) for x in x[i:i+16] )
+			result += ''.join(pretty_print(x) for x in x[i:i + 16])
+			#result+=f'{line}\n'
+			i += 16
+	except Exception as ex:
+		print(f'Hexdump exception for data {data} \n {ex}')
+	return result
