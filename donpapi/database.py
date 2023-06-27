@@ -38,9 +38,10 @@ class reporting:
             with open(os.path.join(os.path.join(my_path, "config"), "donpapi_config.json")) as config:
                 config_parser = json.load(config)
                 # Gérer les chemins Win vs Linux pour le .replace('\\', '/')
-                mycss = os.path.join(my_path, config_parser['css']).replace('\\', '/')
-                mychartjs = os.path.join(my_path, config_parser['mychartjs']).replace('\\', '/')
-                logo_login_path = os.path.join(my_path, config_parser['logo_login']).replace('\\', '/')
+                with open(os.path.join(my_path, config_parser['css']).replace('\\', '/'),'r') as f:
+                    mycss = f.read()
+                with open(os.path.join(my_path, config_parser['logo_login']).replace('\\', '/'),'rb') as f:
+                    logo_login = base64.b64encode(f.read()).decode('utf-8')
         # self.logging.debug(f"[+] {logo_login_path}")
         except Exception as ex:
             self.logging.debug(f" Exception {bcolors.WARNING}  in running Report {bcolors.ENDC}")
@@ -69,27 +70,18 @@ class reporting:
             self.logging.debug(f" Exception {bcolors.WARNING}  in Creating Report File {bcolors.ENDC}")
             self.logging.debug(ex)
             return False
-        # Copy css file:
-        try:
-            for myfiles in [(mycss, 'style.css'), (logo_login_path, 'Logo_LOGIN.PNG')]:
-                myfile, myfilename = myfiles
-                if os.path.exists(myfile) and not os.path.exists(
-                        os.path.join(os.path.join(self.options.output_directory, 'res'), myfilename)):
-                    shutil.copy2(myfile, os.path.join(os.path.join(self.options.output_directory, 'res'), myfilename))
-        except Exception as ex:
-            self.logging.debug(f" Exception {bcolors.WARNING}  in RES copy {bcolors.ENDC}")
-            self.logging.debug(ex)
-            return False
-
+        
         data = """	<!DOCTYPE html>
-		<link rel="stylesheet" type="text/css" href="%s">
 			<html>
 			<head>
 			  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-			  <title>DonPapi - Result for %s</title>	
+			  <title>DonPapi - Results</title>
+              <style>
+                %s
+              </style>
 			</head>
 			<body onload="toggleAll()">
-			\n""" % (mycss, "[client_name]")
+			\n""" % (mycss)
         self.add_to_resultpage(data)
 
         # Tableau en top de page pour les liens ?
@@ -110,7 +102,7 @@ class reporting:
         data += """<table><TR><TD class="menu_top"><a class="firstletter">D</a><a>onPapi Audit</a></TD></TR>\n"""
         data += """<TR><TD class="menu_top"><BR> %s <BR></TD></TR></TABLE><BR>\n""" % date.today().strftime("%d/%m/%Y")
 
-        data += """<table><TR><TD><img class="logo_left" src='%s'></TD>""" % os.path.join('res', 'Logo_LOGIN.PNG')
+        data += """<table><TR><TD><img class="logo_left" src="data:image/png;base64,%s"></TD>""" % logo_login
         '''if os.path.isfile(os.path.join(logdir, 'logo.png')):
 			data += """<TD><img class="logo" src='%s'></TD>""" % (os.path.join(logdir, 'logo.png'))'''
         data += """<BR></div></TD></TR></TABLE><BR>\n"""

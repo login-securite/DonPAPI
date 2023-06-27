@@ -3,7 +3,6 @@
 	"db_path":"donpapi.db",
 	"db_name":"donpapi.db",
 	"css":"res\\style.css",
-	"mychartjs":"res\\css\\Chart.js",
 	"logo_login": "res\\Logo_LOGIN.PNG",
 	"logo_link": "res\\link.png",
 	"BH_neo4j_ip": "127.0.0.1",
