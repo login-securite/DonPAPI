@@ -325,7 +325,7 @@ class reporting:
                 for info in [client_auth]:
                     if client_auth:
                         cmd = f"certipy auth -pfx {os.path.join(os.getcwd(), pfx_filepath)}"
-                        data += f"""<TD {special_style} onClick="CopyToClipboard('{cmd}')"><A title="{cmd}">Yes</A></TD>"""
+                        data += f"""<TD {special_style} ><button onclick="CopyToClipboard('{cmd}')">Yes</button></TD>"""
                     else:
                         data += f"""<TD {special_style} ><A title="No">No</A></TD>"""
                 data += """</TR>\n"""
