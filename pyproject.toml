@@ -7,18 +7,21 @@ readme = "readme.md"
 homepage = "https://github.com/login-securite/DonPAPI"
 repository = "https://github.com/login-securite/DonPAPI"
 exclude = []
-include = ["config/*", "lazagne/*", "lib/*", "software/*", "*.py"]
+include = ["donpapi/config/*", "donpapi/res/*"]
 classifiers = [
     'Environment :: Console',
     'Programming Language :: Python :: 3',
     'Topic :: Security',
 ]
 packages = [
-    { include = "lib", from = "." }
+    { include = "donpapi"},
+    { include = "donpapi/lib"},
+    { include = "donpapi/software"},
+    { include = "donpapi/lazagne"},
 ]
 
 [tool.poetry.scripts]
-donpapi = 'DonPAPI:main'
+DonPAPI = 'donpapi.entry:main'
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -28,6 +31,7 @@ LnkParse3 = "^1.2.0"
 wheel = "^0.37.0"
 M2Crypto = "^0.38.0"
 pycryptodome = "^3.11.0"
+swig = "^4.1.1"
 
 [tool.poetry.dev-dependencies]
 
