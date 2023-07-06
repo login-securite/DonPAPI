@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "donpapi"
-version = "1.0.0"
+version = "1.0.1"
 description = "Dumping revelant information on compromised targets without AV detection"
 authors = ["Login Securite <contact@login-securite.com>"]
 readme = "readme.md"
