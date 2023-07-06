@@ -158,9 +158,9 @@ class DPAPI:
 				key2 = None
 			else:
 				# Assume MD4
-				key1 = HMAC.new(pwdhash, (sid + '\0').encode('utf-16le'), SHA1).digest()
+				key1 = HMAC.new(pwdhash.encode('utf-16le'), (sid + '\0').encode('utf-16le'), SHA1).digest()
 				# For Protected users
-				tmpKey = pbkdf2_hmac('sha256', pwdhash, sid.encode('utf-16le'), 10000)
+				tmpKey = pbkdf2_hmac('sha256', pwdhash.encode('utf-16le'), sid.encode('utf-16le'), 10000)
 				tmpKey2 = pbkdf2_hmac('sha256', tmpKey, sid.encode('utf-16le'), 1)[:16]
 				key2 = HMAC.new(tmpKey2, (sid + '\0').encode('utf-16le'), SHA1).digest()[:20]
 		except Exception as e:
