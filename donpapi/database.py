@@ -1,77 +1,94 @@
-import logging
-import binascii, os, json, datetime, shutil, base64
+#!/usr/bin/env python3
+# -*- encoding: utf-8 -*-
+
+import base64
+import binascii
+import json
+import os
+import time
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from donpapi.lib.toolbox import bcolors
 
 
-class reporting:
+class Reporting:
+    """Reporting class, generate multiple reports."""
     def __init__(self, conn, logger, options, targets):
         self.conn = conn
         self.logging = logger
         self.options = options
         self.targets = targets
-        self.report_file = os.path.join(self.options.output_directory,
-                                        '%s_result.html' % date.today().strftime("%d-%m-%Y"))
+        self.time = int(time.time())
+        self.report_prefix = f"DonPAPI_{self.time}_"
+        self.report_name = f"{self.report_prefix}result.html"
+        self.report_file = Path(self.options.output_directory, self.report_name)
+        self.html_path = Path(self.options.output_directory, 'html')
 
-    def add_to_resultpage(self, datas, report_file=""):
+    def add_to_resultpage(self, datas):
+        """Write datas string to self.result_file (append mode). """
         try:
-            if report_file == "":
-                report_file = self.report_file
-            datas = datas.encode('ascii', 'ignore')
-            f = open(report_file, 'ab')
-            f.write(datas)
-            f.close()
+            with open(self.report_file, 'a', encoding="utf-8") as report:
+                report.write(datas)
             return True
-        except Exception as ex:
-            self.logging.debug(f" Exception {bcolors.WARNING}  in add to resultat {bcolors.ENDC}")
+        except OSError as ex:
+            error = f" Exception {bcolors.WARNING} in add_to_resultpage() {bcolors.ENDC}"
+            self.logging.debug(error)
             self.logging.debug(ex)
             return False
 
-    def generate_report(self, type='', user='', target='',
-                        report_content=['credz', 'certificates', 'cookies', 'files', 'connected_user', 'hash_reuse',
-                                        'audited_scope', 'masterkeys'],
-                        credz_content=['wifi', 'taskscheduler', 'credential-blob', 'browser', 'sysadmin', 'SAM', 'LSA',
-                                       'DCC2'], report_file=""):
+    def generate_report(self, report_name="", report_content=None, credz_content=None):
+        """Generate html reports with specified options."""
 
+        # Update report name if needed
+        if report_name is not None:
+            self.report_name = f"{self.report_prefix}{report_name}.html"
+            self.report_file = Path(self.options.output_directory, self.report_name)
+
+        # Set default options content if not specified
+        if report_content is None:
+            report_content = ['credz', 'certificates', 'cookies', 'files',
+                              'connected_user', 'hash_reuse', 'audited_scope',
+                              'masterkeys']
+
+        if credz_content is None:
+            credz_content = ['wifi', 'taskscheduler', 'credential-blob',
+                             'browser', 'sysadmin', 'SAM', 'LSA', 'DCC2']
+
+        # Read CSS and Logo contents from configuration
         try:
-            my_path = os.path.dirname(os.path.realpath(__file__))
-            with open(os.path.join(os.path.join(my_path, "config"), "donpapi_config.json")) as config:
+            my_path = Path(__file__).parent
+            dp_config = Path(my_path, "config", "donpapi_config.json")
+            with open(dp_config, encoding="utf-8", mode="r") as config:
                 config_parser = json.load(config)
-                # Gérer les chemins Win vs Linux pour le .replace('\\', '/')
-                with open(os.path.join(my_path, config_parser['css']).replace('\\', '/'),'r') as f:
-                    mycss = f.read()
-                with open(os.path.join(my_path, config_parser['logo_login']).replace('\\', '/'),'rb') as f:
-                    logo_login = base64.b64encode(f.read()).decode('utf-8')
-        # self.logging.debug(f"[+] {logo_login_path}")
-        except Exception as ex:
-            self.logging.debug(f" Exception {bcolors.WARNING}  in running Report {bcolors.ENDC}")
+            css_path = Path(my_path, config_parser['css'])
+            logo_path = Path(my_path, config_parser['logo_login'])
+            with open(css_path, encoding="utf-8", mode="r") as css_file:
+                mycss = css_file.read()
+            with open(logo_path, encoding="utf-8", mode="rb") as logo_file:
+                logo_login = base64.b64encode(logo_file.read()).decode('utf-8')
+        except OSError as ex:
+            error = f" Exception {bcolors.WARNING}  in generate_report() {bcolors.ENDC}"
+            self.logging.debug(error)
             self.logging.debug(ex)
 
-        self.logging.info(f"[+] Generating report : {report_file}")
-        if self.conn == None:
-            self.logging.debug(f"[+] db ERROR - {self.options.output_directory}")
-            return -1
+        self.logging.info(f"[+] Generating report : {self.report_file}")
+
+        # Verify SQL database
+        if self.conn is None:
+            error = f"[+] db ERROR - self.conn is None : {self.options.output_directory}"
+            self.logging.debug(error)
+            return False
 
         try:
-            if report_file == "":
-                self.report_file = os.path.join(self.options.output_directory,
-                                                '%s_result.html' % date.today().strftime("%d-%m-%Y"))
-            else:
-                self.report_file = os.path.join(self.options.output_directory, report_file)
-            if os.path.exists(self.report_file):
-                if os.path.exists(self.report_file + "_old"):
-                    os.remove(self.report_file + "_old")
-                    os.rename(self.report_file, self.report_file + "_old")
-                os.remove(self.report_file)
-
-            if not os.path.exists(os.path.join(self.options.output_directory, 'res')):
-                os.mkdir(os.path.join(self.options.output_directory, 'res'))
-        except Exception as ex:
-            self.logging.debug(f" Exception {bcolors.WARNING}  in Creating Report File {bcolors.ENDC}")
+            if not os.path.exists(self.html_path):
+                os.mkdir(self.html_path)
+        except OSError as ex:
+            error = f" Exception {bcolors.WARNING}  in generate_report() {bcolors.ENDC}"
+            self.logging.debug(error)
             self.logging.debug(ex)
             return False
-        
-        data = """	<!DOCTYPE html>
+
+        data = """<!DOCTYPE html>
 			<html>
 			<head>
 			  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
@@ -82,29 +99,27 @@ class reporting:
 			</head>
 			<body onload="toggleAll()">
 			\n""" % (mycss)
+
         self.add_to_resultpage(data)
 
-        # Tableau en top de page pour les liens ?
+        # Top table for links ?
         data = """<table class="statistics"><TR><Th><a class="firstletter">M</a><a>enu</A></Th></TR>\n"""
         data = """<div class="navbar">\n"""
-        for menu in ['wifi', 'taskscheduler', 'credential-blob', 'certificates', 'browser-internet_explorer', 'cookies',
-                     'SAM', 'LSA', 'DCC2',
+        for menu in ['wifi', 'taskscheduler', 'credential-blob', 'certificates',
+                     'browser-internet_explorer', 'cookies', 'SAM', 'LSA', 'DCC2',
                      'Files', 'Connected-users', 'Local_account_reuse', 'Scope_Audited']:
-            # data += f"""<TR><TD class="menu_top"><BR><a href="#{menu}"> {menu} </A><BR></TD></TR>\n"""
             data += f"""<a href="#{menu}"> {menu.upper()}</A>\n"""
         data += """</DIV><BR>\n"""
         self.add_to_resultpage(data)
 
         # Logo @ Titre
+        today = date.today().strftime("%d/%m/%Y")
+
         data = """<DIV class="main">\n"""
         data += """<table class="main"><TR><TD>\n"""
-
         data += """<table><TR><TD class="menu_top"><a class="firstletter">D</a><a>onPapi Audit</a></TD></TR>\n"""
-        data += """<TR><TD class="menu_top"><BR> %s <BR></TD></TR></TABLE><BR>\n""" % date.today().strftime("%d/%m/%Y")
-
+        data += """<TR><TD class="menu_top"><BR> %s <BR></TD></TR></TABLE><BR>\n""" % today
         data += """<table><TR><TD><img class="logo_left" src="data:image/png;base64,%s"></TD>""" % logo_login
-        '''if os.path.isfile(os.path.join(logdir, 'logo.png')):
-			data += """<TD><img class="logo" src='%s'></TD>""" % (os.path.join(logdir, 'logo.png'))'''
         data += """<BR></div></TD></TR></TABLE><BR>\n"""
         self.add_to_resultpage(data)
 
@@ -164,11 +179,12 @@ class reporting:
 		</script>
 
 		"""
+
         self.add_to_resultpage(data)
 
         if 'credz' in report_content:
             results = self.get_credz()
-            # popolute credz report filtering :
+            # populate credentials report filtering :
             if 'browser' in credz_content:
                 credz_content.append('browser-internet_explorer')
                 credz_content.append('browser-firefox')
@@ -178,7 +194,6 @@ class reporting:
                 credz_content.append('MRemoteNG')
                 credz_content.append('Putty')
                 credz_content.append('Winscp')
-            # credz_content.append('VNC')
 
             data = """<table class="statistics"><TR>
 			<Th><a class="firstletter">U</a><a>sername</A></Th>
@@ -188,49 +203,52 @@ class reporting:
 			<Th><a class="firstletter">P</a><a>illaged_from_computerid</A></Th>
 			<Th><a class="firstletter">P</a><a>illaged_from_userid</A></Th></TR>\n"""
 
-            # <a href="#" id="toggle" onClick="toggle_it('tr1');toggle_it('tr2')">
             current_type = ''
-            for index, cred in enumerate(results):
-                cred_id, file_path, username, password, target, type, pillaged_from_computerid, pillaged_from_userid = cred
-                # filtering data to be included in the report
-                if type not in credz_content:
-                    continue
-                if type != current_type:
-                    current_type = type
-                    current_type_count = self.get_credz_count(current_type,
-                                                              'AND username NOT IN ("NL$KM_history") AND target NOT IN ("WindowsLive:target=virtualapp/didlogical","Adobe App Info","Adobe App Prefetched Info","Adobe User Info","Adobe User OS Info","MicrosoftOffice16_Data:ADAL","LegacyGeneric:target=msteams_adalsso/adal_contex")')[
-                        0][0]
-                    data += f"""<TR id={current_type}><TD colspan="6" class="toggle_menu" onClick="toggle_it('{current_type}')"><A>{current_type} ({current_type_count})</A></TD></TR>"""
+            for index, credentials in enumerate(results):
+                _ = credentials[0]  # cred_id, not used
+                file_path = credentials[1]
+                username = credentials[2]
+                password = credentials[3]
+                target = credentials[4]
+                creds_type = credentials[5]
+                pillaged_from_computerid = credentials[6]
+                pillaged_from_userid = credentials[7]
 
-                # Skip infos of
-                # WindowsLive:target=virtualapp/didlogical
+                # filtering data to be included in the report
+                if creds_type not in credz_content:
+                    continue
+
+                # Skip infos of WindowsLive:target=virtualapp/didlogical
                 untreated_targets = ["WindowsLive:target=virtualapp/didlogical", "Adobe App Info",
-                                     "Adobe App Prefetched Info", "Adobe User Info", "Adobe User OS Info",
-                                     "MicrosoftOffice16_Data:ADAL", "LegacyGeneric:target=msteams_adalsso/adal_contex"]
+                                     "Adobe App Prefetched Info", "Adobe User Info",
+                                     "Adobe User OS Info", "MicrosoftOffice16_Data:ADAL",
+                                     "LegacyGeneric:target=msteams_adalsso/adal_contex"]
                 untreated_users = ["NL$KM_history"]
 
-                blacklist_bypass = False
-                for untreated in untreated_targets:
-                    if untreated in target:
-                        blacklist_bypass = True
-                for untreated in untreated_users:
-                    if untreated in username:
-                        blacklist_bypass = True
-                if blacklist_bypass:
+
+                if creds_type != current_type:
+                    current_type = creds_type
+                    query = f"""AND username NOT IN ("{'","'.join(untreated_users)}") """
+                    query += f"""AND target NOT IN ("{'","'.join(untreated_targets)}")"""
+                    current_type_count = self.get_credz_count(current_type, query)[0][0]
+                    data += f"""<TR id={current_type}><TD colspan="6" class="toggle_menu" """
+                    data += f"""onClick="toggle_it('{current_type}')"><A>{current_type} """
+                    data += f"""({current_type_count})</A></TD></TR>"""
+
+                # blacklist_bypass
+                if (len(set(untreated_targets) & set(target)) or \
+                    len(set(untreated_users) & set(username))):
                     continue
 
                 # Get computer infos
-                res = self.get_computer_infos(pillaged_from_computerid)
-                for index_, res2 in enumerate(res):
-                    ip, hostname = res2
-                computer_info = f"{ip} | {hostname}"
+                computer_ip, hostname = list(self.get_computer_infos(pillaged_from_computerid))[0]
+                computer_info = f"{computer_ip} | {hostname}"
+
                 # pillaged_from_userid
-                if pillaged_from_userid != None:
-                    res = self.get_user_infos(pillaged_from_userid)
-                    for index_, pillaged_username in enumerate(res):
-                        pillaged_from_userid = pillaged_username[0]
+                if pillaged_from_userid is not None:
+                    pillaged_from_userid = list(self.get_user_infos(pillaged_from_userid))[0][0]
                 else:
-                    pillaged_from_userid = str(pillaged_from_userid)
+                    pillaged_from_userid = str(pillaged_from_userid)  # TODO : ??
 
                 if index % 2 == 0:
                     data += f"""<TR class=tableau_resultat_row0 {current_type}=1>"""
@@ -242,23 +260,23 @@ class reporting:
                 else:
                     special_style = ""
 
-                ###Print block
-                # Recup des username dans le target #/# a update dans myseatbelt.py pour faire une fonction dump_CREDENTIAL_XXXXX clean
+                ### Print block
+                # recover username from target
+                # TODO: update myseatbelt.py to make a clean function dump_CREDENTIAL_XXXXX
+
                 if "LegacyGeneric:target=MicrosoftOffice1" in target:
-                    username = f'''{target.split(':')[-1]}'''
-                # Les pass LSA sont souvent en Hexa
+                    username = target.split(':')[-1]
+
+                # LSA passwords are often in Hexadecimals
                 # if "LSA" in type:
                 try:
                     hex_passw = ''
                     hex_passw = binascii.unhexlify(password).replace(b'>', b'')
-                except Exception as ex:
-                    # print(ex)
-                    pass
+                except binascii.Error as _:
+                    hex_passw = password
 
-                for info in [username]:
-                    data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
-                for info in [password]:
-                    data += f"""<TD {special_style} ><A title="{hex_passw}"> {str(info)[:48]} </A></TD>"""
+                data += f'<TD {special_style} ><A title="{username}"> {username[:48]} </A></TD>'
+                data += f'<TD {special_style} ><A title="{hex_passw}"> {password[:48]} </A></TD>'
 
                 # check if info contains a URL
                 if 'http:' in target or 'https:' in target:
@@ -268,17 +286,21 @@ class reporting:
                     info2 = target[target.index('ftp'):]
                     special_ref = f'''href="{info2}" target="_blank" title="{target}"'''
                 elif "Domain:target=" in target:
-                    info2 = f'''rdp://full%20address=s:{target[target.index('Domain:target=') + len('Domain:target='):]}:3389&username=s:{username}&audiomode=i:2&disable%20themes=i:1'''
+                    target_addr = target[target.index('Domain:target=') + len('Domain:target='):]
+                    info2 = f"rdp://full%20address=s:{target_addr}:3389&username=s:{username}"
+                    info2 += "&audiomode=i:2&disable%20themes=i:1"
                     special_ref = f'''href="{info2}" title="{target}"'''
                 elif "LegacyGeneric:target=MicrosoftOffice1" in target:
-                    target = f'''{target[target.index('LegacyGeneric:target=') + len('LegacyGeneric:target='):]}'''
-                    special_ref = f'''href="https://login.microsoftonline.com/" target="_blank" title="OfficeLogin"'''
+                    target = target[target.index('LegacyGeneric:target=') + 
+                                    len('LegacyGeneric:target='):]
+                    special_ref = 'href="https://login.microsoftonline.com/" target="_blank" ' \
+                                  'title="OfficeLogin"'
                 else:
                     special_ref = f'''title="{target}"'''
-                data += f"""<TD {special_style} ><A {special_ref}> {str(target)[:48]} </A></TD>"""
+                data += f'<TD {special_style} ><A {special_ref}> {str(target)[:48]} </A></TD>'
 
-                for info in [type, computer_info, pillaged_from_userid]:
-                    data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
+                for info in [creds_type, computer_info, pillaged_from_userid]:
+                    data += f'<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>'
                 data += """</TR>\n"""
 
             data += """</TABLE><BR>"""
