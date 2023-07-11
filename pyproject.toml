@@ -6,6 +6,7 @@ authors = ["Login Securite <contact@login-securite.com>"]
 readme = "readme.md"
 homepage = "https://github.com/login-securite/DonPAPI"
 repository = "https://github.com/login-securite/DonPAPI"
+license = "'GNU (GPLv3)"
 exclude = []
 include = ["donpapi/config/*", "donpapi/res/*"]
 classifiers = [
