@@ -36,10 +36,10 @@ assets={}
 BANNER = """
                                                                                 
          ,                                                                      
-       ,                                                                        
+       ,                                                 LeHack Release! \U0001F480                       
         (                                                                       
-       .                                                                        
-                                &&&&&&                   LeHack Release! \U0001F480                                          
+       .                                          by Touf & Zblurx @ Login-Securite                       
+                                &&&&&&                                                             
      &&&&&%%%.                  &&&&&&                                          
       &&&&%%%              &&&& &&&&&&       &&&&&&            &&&&&.           
       &&&&%%%           &&&&&&& &&&&&&    &&&&&&&&&&&&&     &&&&&&&&&&&         
@@ -62,7 +62,7 @@ BANNER = """
 def main():
 	global assets
 	print(BANNER)
-	parser = argparse.ArgumentParser(add_help = True, description = "SeatBelt implementation.")
+	parser = argparse.ArgumentParser(add_help = True, description = "Dump revelant information on compromised targets without AV detection.")
 
 	parser.add_argument('target', nargs='?', action='store', help='[[domain/]username[:password]@]<targetName or address>',default='')
 	parser.add_argument('-credz', action='store', help='File containing multiple user:password or user:hash for masterkeys decryption')

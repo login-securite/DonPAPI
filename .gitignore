@@ -44,3 +44,4 @@ globallog.log
 
 # Safe
 donpapi.db
+*.pvk
