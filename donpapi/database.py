@@ -88,22 +88,23 @@ class Reporting:
             self.logging.debug(ex)
             return False
 
-        data = """<!DOCTYPE html>
+        data = f"""<!DOCTYPE html>
 			<html>
 			<head>
 			  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
 			  <title>DonPapi - Results</title>
               <style>
-                %s
+                {mycss}
               </style>
 			</head>
 			<body onload="toggleAll()">
-			\n""" % (mycss)
+			\n"""
 
         self.add_to_resultpage(data)
 
         # Top table for links ?
-        data = """<table class="statistics"><TR><Th><a class="firstletter">M</a><a>enu</A></Th></TR>\n"""
+        data = """<table class="statistics"><TR><Th>"""
+        data += """<a class="firstletter">M</a><a>enu</A></Th></TR>\n"""
         data = """<div class="navbar">\n"""
         for menu in ['wifi', 'taskscheduler', 'credential-blob', 'certificates',
                      'browser-internet_explorer', 'cookies', 'SAM', 'LSA', 'DCC2',
@@ -117,9 +118,11 @@ class Reporting:
 
         data = """<DIV class="main">\n"""
         data += """<table class="main"><TR><TD>\n"""
-        data += """<table><TR><TD class="menu_top"><a class="firstletter">D</a><a>onPapi Audit</a></TD></TR>\n"""
-        data += """<TR><TD class="menu_top"><BR> %s <BR></TD></TR></TABLE><BR>\n""" % today
-        data += """<table><TR><TD><img class="logo_left" src="data:image/png;base64,%s"></TD>""" % logo_login
+        data += """<table><TR><TD class="menu_top"><a class="firstletter">"""
+        data += """D</a><a>onPapi Audit</a></TD></TR>\n"""
+        data += f"""<TR><TD class="menu_top"><BR> {today} <BR></TD></TR></TABLE><BR>\n"""
+        data += """<table><TR><TD><img class="logo_left" src="data:image/png;"""
+        data += f"""base64,{logo_login}"></TD>"""
         data += """<BR></div></TD></TR></TABLE><BR>\n"""
         self.add_to_resultpage(data)
 
@@ -320,14 +323,22 @@ class Reporting:
 					"""
 
             current_type = 'certificates'
-            data += f"""<TR id=certificates><TD colspan="6" class="toggle_menu" onClick="toggle_it('certificates')"><A>Certificates ({len(results)})</A></TD></TR>"""
+            data += """<TR id=certificates><TD colspan="6" class="toggle_menu" """
+            data += """onClick="toggle_it('certificates')"><A>Certificates """
+            data += f"""({len(results)})</A></TD></TR>"""
             for index, cred in enumerate(results):
-                _, pfx_filepath, guid, issuer, subject, client_auth, pillaged_from_computerid, pillaged_from_userid = cred
-                res = self.get_computer_infos(pillaged_from_computerid)
-                for _, res2 in enumerate(res):
-                    ip, hostname = res2
-                computer_info = f"{ip} | {hostname}"
-                if pillaged_from_userid != None:
+                _ = cred[0]
+                pfx_filepath = cred[1]
+                guid = cred[2]
+                issuer = cred[3]
+                subject = cred[4]
+                client_auth = cred[5]
+                pillaged_from_computerid = cred[6]
+                pillaged_from_userid = cred[7]
+
+                computer_ip, hostname = list(self.get_computer_infos(pillaged_from_computerid))[0]
+                computer_info = f"{computer_ip} | {hostname}"
+                if pillaged_from_userid is not None:
                     res = self.get_user_infos(pillaged_from_userid)
                     for _, pillaged_username in enumerate(res):
                         pillaged_from_userid = pillaged_username[0]
@@ -343,13 +354,14 @@ class Reporting:
 
                 ###Print block
                 for info in [issuer, subject, computer_info, pillaged_from_userid]:
-                    data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
+                    data += f"""<TD><A title="{info}"> {str(info)[:48]} </A></TD>"""
                 for info in [client_auth]:
                     if client_auth:
                         cmd = f"certipy auth -pfx {os.path.join(os.getcwd(), pfx_filepath)}"
-                        data += f"""<TD {special_style} ><button onclick="CopyToClipboard('{cmd}')">Yes</button></TD>"""
+                        data += f"""<TD><button onclick="CopyToClipboard('{cmd}')">"""
+                        data += "Yes</button></TD>"
                     else:
-                        data += f"""<TD {special_style} ><A title="No">No</A></TD>"""
+                        data += """<TD><A title="No">No</A></TD>"""
                 data += """</TR>\n"""
             data += """</TABLE><BR>"""
             self.add_to_resultpage(data)
@@ -370,7 +382,8 @@ class Reporting:
 
             # <a href="#" id="toggle" onClick="toggle_it('tr1');toggle_it('tr2')">
             current_type = 'cookies'
-            data += f"""<TR id=cookies><TD colspan="8" class="toggle_menu" onClick="toggle_it('cookies')"><A>Cookies ({len(results)})</A></TD></TR>"""
+            data += """<TR id=cookies><TD colspan="8" class="toggle_menu" """
+            data += f"""onClick="toggle_it('cookies')"><A>Cookies ({len(results)})</A></TD></TR>"""
             previous_target = ''
             previous_userid = ''
             previous_computerid = ''
@@ -378,8 +391,17 @@ class Reporting:
             temp = []
             groupindex = 0
             for index_, cred_ in enumerate(results):
-                name_, value_, expires_utc, target, type, pillaged_from_computerid, pillaged_from_userid = cred_
-                if target == previous_target and pillaged_from_userid == previous_userid and pillaged_from_computerid == previous_computerid:
+                name_ = cred_[0]
+                value_ = cred_[1]
+                expires_utc = cred_[2]
+                target = cred_[3]
+                type_ = cred_[4]
+                pillaged_from_computerid = cred_[5]
+                pillaged_from_userid= cred_[6]
+
+                if target == previous_target and \
+                   pillaged_from_userid == previous_userid and \
+                   pillaged_from_computerid == previous_computerid:
                     temp.append((index_, cred_))
                     if value_ != '':
                         temp_cookie = f"{temp_cookie}\\ndocument.cookie=\\'{name_}={value_}\\'"
@@ -389,36 +411,47 @@ class Reporting:
                     previous_target = target
                     previous_computerid = pillaged_from_computerid
                     previous_userid = pillaged_from_userid
-                if rendering == True or index_ == (len(results) - 1):
+                if rendering is True or index_ == (len(results) - 1):
                     groupindex += 1
                     for index, cred in temp:
-                        name, value, expires_utc, target, type, pillaged_from_computerid, pillaged_from_userid = cred
+                        name = cred[0]
+                        value = cred[1]
+                        expires_utc = cred[2]
+                        target = cred[3]
+                        type_cred = cred[4]
+                        pillaged_from_computerid = cred[5]
+                        pillaged_from_userid = cred[6]
                         # Skip infos of
-                        self.logging.debug(
-                            f" analysing cookie  {bcolors.WARNING}  {name} {value} {type} {target} UTC:{expires_utc} {bcolors.ENDC}")
+                        log_debug = f" analysing cookie  {bcolors.WARNING}  {name} {value} "
+                        log_debug += f"{type_cred} {target} UTC:{expires_utc} {bcolors.ENDC}"
+                        self.logging.debug(log_debug)
                         try:
                             if value == '':
                                 continue
-                            if (type == "browser-chrome" and (expires_utc != 0) and (
-                                    datetime(1601, 1, 1) + timedelta(microseconds=expires_utc)) < datetime.today()) or (
-                                    type != "browser-chrome" and datetime.fromtimestamp(
-                                    expires_utc) < datetime.today()):
-                                self.logging.debug(
-                                    f" Skipping old cookie  {bcolors.WARNING}  {name} {value} {type} {target} {expires_utc} {bcolors.ENDC}")
+                            utc_time = (datetime(1601, 1, 1) + timedelta(microseconds=expires_utc))
+                            if (type_cred == "browser-chrome" and (expires_utc != 0) and \
+                                utc_time < datetime.today()) or \
+                               (type_cred != "browser-chrome" and \
+                                datetime.fromtimestamp(expires_utc) < datetime.today()):
+                                log_debug = f" Skipping old cookie  {bcolors.WARNING}  {name} "
+                                log_debug += f"{value} {type_cred} {target} {expires_utc} "
+                                log_debug += f"{bcolors.ENDC}"
+                                self.logging.debug(log_debug)
                                 continue
                         #####
-                        except Exception as ex:
-                            self.logging.debug(
-                                f" Exception {bcolors.WARNING} Exception in Cookie  {name} {value} {type} {target} {expires_utc} {bcolors.ENDC}")
+                        except OSError as ex:
+                            error = f" Exception {bcolors.WARNING} Exception in Cookie  {name} {value} "
+                            error += f"{type_cred} {target} {expires_utc} {bcolors.ENDC}"
+                            self.logging.debug(error)
                             self.logging.debug(ex)
                             continue
                         # Add browser version
-                        # self.logging.debug(f'get browser type browser_type={type}, pillaged_from_computerid={pillaged_from_computerid},pillaged_from_userid={pillaged_from_userid}')
-                        res = self.get_browser_version(browser_type=type,
+                        # self.logging.debug(f'get browser type browser_type={type_cred}, pillaged_from_computerid={pillaged_from_computerid},pillaged_from_userid={pillaged_from_userid}')
+                        res = self.get_browser_version(browser_type=type_cred,
                                                        pillaged_from_computerid=pillaged_from_computerid,
                                                        pillaged_from_userid=pillaged_from_userid)
                         if len(res) > 0:
-                            type += f" - {res[0]}"
+                            type_cred += f" - {res[0]}"
                         # self.logging.debug(f'Type:{type}')
                         # Get computer infos
                         res = self.get_computer_infos(pillaged_from_computerid)
@@ -452,7 +485,7 @@ class Reporting:
                             for info in [
                                 expires_utc]:  # Formule a change si on intègre des cookies venant d'autre chose que chrome
                                 try:
-                                    if type == "browser-chrome":
+                                    if type_cred == "browser-chrome":
                                         data += f"""<TD {special_style} ><A title="{info}"> {(datetime(1601, 1, 1) + timedelta(microseconds=info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
                                     else:
                                         data += f"""<TD {special_style} ><A title="{info}"> {(datetime.fromtimestamp(info)).strftime('%b %d %Y %H:%M:%S')} </A></TD>"""
@@ -477,7 +510,7 @@ class Reporting:
                                 special_ref = f'''title="{target}"'''
                             data += f"""<TD {special_style} ><A {special_ref}> {str(target)[:48]} </A></TD>"""
 
-                            for info in [type, computer_info, pillaged_from_userid]:
+                            for info in [type_cred, computer_info, pillaged_from_userid]:
                                 data += f"""<TD {special_style} ><A title="{info}"> {str(info)[:48]} </A></TD>"""
 
                             data += f"""<TD {special_style} ><button onclick="CopyToClipboard('{temp_cookie}')">Copy</button></TD>"""
