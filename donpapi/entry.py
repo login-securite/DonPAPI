@@ -230,7 +230,7 @@ def main():
             my_report.export_sam()
             my_report.export_cookies()
             if options.GetHashes:
-                my_report.export_MKF_hashes()
+                my_report.export_mkf_hashes()
                 my_report.export_dcc2_hashes()
         except Exception as e:
             logging.error(str(e))

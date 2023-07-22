@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
+"""
+Reporting Module.
+Generate HTML content from a given database and formating choices.
+"""
+
 import base64
 import binascii
 import json
@@ -287,7 +292,7 @@ class Reporting:
                     info2 += "&audiomode=i:2&disable%20themes=i:1"
                     special_ref = f'''href="{info2}" title="{target}"'''
                 elif "LegacyGeneric:target=MicrosoftOffice1" in target:
-                    target = target[target.index('LegacyGeneric:target=') + 
+                    target = target[target.index('LegacyGeneric:target=') +
                                     len('LegacyGeneric:target='):]
                     special_ref = 'href="https://login.microsoftonline.com/" target="_blank" ' \
                                   'title="OfficeLogin"'
@@ -464,7 +469,7 @@ class Reporting:
                             for info in [name, value]:
                                 data += f"""<td {special_style} ><a title="{info}">"""
                                 data += f"""{str(info)[:48]}</a></td>"""
-                            # Formule a change si on intègre des cookies venant 
+                            # Formule a change si on intègre des cookies venant
                             # d'autre chose que Chrome
                             for info in [expires_utc]:
                                 try:
@@ -631,17 +636,19 @@ class Reporting:
         # Etat des masterkeyz
         if self.options.debug and 'masterkeys' in report_content:
             results = self.get_masterkeys()
-            data = """<table class="statistics" id="Scope_Audited"><tr><th><a class="firstletter">M</a><a>asterkeys : </th></tr>\n"""
+            data = """<table class="statistics" id="Scope_Audited"><tr>
+            <th><a class="firstletter">M</a><a>asterkeys : </th></tr>\n"""
             data += """<tr><th><a class="firstletter">G</a><a>uid</a></th>
-							<th><a class="firstletter">S</a><a>tatus</a></th>
-							<th><a class="firstletter">D</a><a>ecrypted_with</a></th>
-							<th><a class="firstletter">D</a><a>ecrypted_value</a></th>
-							<th><a class="firstletter">C</a><a>omputer</a></th>
-							<th><a class="firstletter">U</a><a>ser</a></th>
-							</tr>\n"""
+            <th><a class="firstletter">S</a><a>tatus</a></th>
+            <th><a class="firstletter">D</a><a>ecrypted_with</a></th>
+            <th><a class="firstletter">D</a><a>ecrypted_value</a></th>
+            <th><a class="firstletter">C</a><a>omputer</a></th>
+            <th><a class="firstletter">U</a><a>ser</a></th>
+            </tr>\n"""
 
             for index, cred in enumerate(results):
-                id, file_path, guid, status, pillaged_from_computerid, pillaged_from_userid, decrypted_with, decrypted_value = cred
+                _cred_id, file_path, guid, status, pillaged_from_computerid, \
+                pillaged_from_userid, decrypted_with, decrypted_value = cred
                 data += "<tr>"
                 for info in [guid, status, decrypted_with]:
                     data += f"""<td> {info} </td>"""
@@ -650,8 +657,8 @@ class Reporting:
 
                 res = self.get_computer_infos(pillaged_from_computerid)
                 for index, res2 in enumerate(res):
-                    ip, hostname = res2
-                computer_info = f"{ip} | {hostname}"
+                    ip_res, hostname = res2
+                computer_info = f"{ip_res} | {hostname}"
                 data += f"""<td> {computer_info} </td>"""
                 res = self.get_user_infos(pillaged_from_userid)
                 for index, res2 in enumerate(res):
@@ -664,15 +671,17 @@ class Reporting:
         data = "</body></html>"
         self.add_to_resultpage(data)
 
+
     def get_dpapi_hashes(self):
+        """Get DPAPI hashes from database."""
         user_hashes = []
         with self.conn:
             cur = self.conn.cursor()
-            cur.execute(f"SELECT sid,hash FROM dpapi_hash")
+            cur.execute("SELECT sid,hash FROM dpapi_hash")
         results = cur.fetchall()
         for line in results:
             sid = line[0]
-            hash = line[1]
+            hash_data = line[1]
             with self.conn:
                 cur = self.conn.cursor()
                 cur.execute(f"SELECT user_id FROM user_sid WHERE LOWER(sid)=LOWER('{sid}')")
@@ -687,125 +696,135 @@ class Reporting:
                 if len(res2) > 0:
                     result = res2[0]
                     username = result[0]
-                    user_hashes.append((username, hash))
+                    user_hashes.append((username, hash_data))
         return user_hashes
 
-    def export_MKF_hashes(self):
+    def export_mkf_hashes(self):
+        """Export MKF hashes."""
         user_hashes = self.get_dpapi_hashes()
-        self.logging.debug(f"Exporting {len(user_hashes)} MKF Dpapi hash to {self.options.output_directory}")
+        debug_log = f"Exporting {len(user_hashes)} MKF Dpapi hash to "
+        debug_log += f"{self.options.output_directory}"
+        self.logging.debug(debug_log)
 
         for algo_type in [1, 2]:
             for context in [1, 2, 3]:
-                filename = os.path.join(self.options.output_directory, 'MKFv%i_type_%i' % (algo_type, context))
+                filename = Path(self.options.output_directory, f"MKFv{algo_type}_type_{context}")
                 if os.path.exists(filename):
                     os.remove(filename)
         for entry in user_hashes:
             try:
                 username = entry[0]
-                hash = entry[1]
+                hash_data = entry[1]
                 # on retire les hash "MACHINE$"
                 if username != "MACHINE$":
-                    # Pour le moment on copie juste les hash. voir pour faire evoluer CrackHash et prendrre username:hash
-                    algo_type = int(hash.split('*')[0][-1])
-                    context = int(hash.split('*')[1])
-                    filename = os.path.join(self.options.output_directory, 'MKFv%i_type_%i' % (algo_type, context))
-                    filename2 = os.path.join(self.options.output_directory,
-                                             'MKFv%i_type_%i_WITH_USERNAME' % (algo_type, context))
-                    f = open(filename, 'ab')
-                    f.write(f"{hash}\n".encode('utf-8'))
-                    f.close()
-                    f = open(filename2, 'ab')
-                    f.write(f"{username}:{hash}\n".encode('utf-8'))
-                    f.close()
-            except Exception as ex:
+                    # Pour le moment on copie juste les hash.
+                    # Voir pour faire evoluer CrackHash et prendrre username:hash
+                    algo_type = int(hash_data.split('*')[0][-1])
+                    context = int(hash_data.split('*')[1])
+                    filename = Path(self.options.output_directory,
+                                    f"MKFv{algo_type}_type_{context}")
+                    filename2 = Path(self.options.output_directory,
+                                     f"MKFv{algo_type}_type_{context}_WITH_USERNAME")
+                    with open(filename, 'ab') as hashfile:
+                        hashfile.write(f"{hash_data}\n".encode('utf-8'))
+                    with open(filename2, 'ab') as hashfile:
+                        hashfile.write(f"{username}:{hash_data}\n".encode('utf-8'))
+            except OSError as ex:
                 self.logging.error(f"Exception in export dpapi hash to {filename}")
                 self.logging.debug(ex)
 
     def get_dcc2_hashes(self):
+        """Return DCC hashes."""
         with self.conn:
             cur = self.conn.cursor()
-            cur.execute(
-                "SELECT DISTINCT username,password FROM credz WHERE LOWER(type)=LOWER('DCC2') ORDER BY username ASC ")
+            cur.execute("SELECT DISTINCT username,password FROM credz "
+                        "WHERE LOWER(type)=LOWER('DCC2') ORDER BY username ASC")
         results = cur.fetchall()
         return results
 
     def export_dcc2_hashes(self):
+        """Export DCC hashes."""
         user_hashes = self.get_dcc2_hashes()
-        filename = os.path.join(self.options.output_directory, 'hash_DCC2')
-        self.logging.debug(f"Exporting {len(user_hashes)} DCC2 hash to {self.options.output_directory}")
+        filename = Path(self.options.output_directory, 'hash_DCC2')
+        debug_log = f"Exporting {len(user_hashes)} DCC2 hash to {self.options.output_directory}"
+        self.logging.debug(debug_log)
         if os.path.exists(filename):
             os.remove(filename)
         for entry in user_hashes:
             try:
                 username = entry[0]
-                hash = entry[1]
-                f = open(filename, 'ab')
-                f.write(f"{username}:{hash}\n".encode('utf-8'))
-                f.close()
-            except Exception as ex:
+                hash_data = entry[1]
+                with open(filename, 'ab') as dcc2_file:
+                    dcc2_file.write(f"{username}:{hash_data}\n".encode('utf-8'))
+            except OSError as ex:
                 self.logging.error(f"Exception in export DCC2 hash to {filename}")
                 self.logging.debug(ex)
-        self.logging.debug(f"Export Done!")
+        self.logging.debug("Export Done!")
 
     def export_credz(self, distinct=True):
-        user_credz = self.get_credz(distinct=True)
-        filename = os.path.join(self.options.output_directory, 'raw_credz')
+        """Export credentials."""
+        user_credz = self.get_credz(distinct=distinct)
+        filename = Path(self.options.output_directory, 'raw_credz')
         self.logging.info(f"Exporting {len(user_credz)} credz to {self.options.output_directory}")
         if os.path.exists(filename):
             os.remove(filename)
-        for index, cred in enumerate(user_credz):
+        for _index, cred in enumerate(user_credz):
             username, password = cred
             try:
-                f = open(filename, 'ab')
-                f.write(f"{username}:{password}\n".encode('utf-8'))
-                f.close()
-            except Exception as ex:
+                with open(filename, 'ab') as raw_file:
+                    raw_file.write(f"{username}:{password}\n".encode('utf-8'))
+            except OSError as ex:
                 self.logging.error(f"Exception in export raw credz to {filename}")
                 self.logging.debug(ex)
-        self.logging.debug(f"Export Done!")
+        self.logging.debug("Export Done!")
 
     def export_sam(self):
+        """Export SAM credentials."""
         user_credz = self.get_credz(distinct_sam=True)
         filename = os.path.join(self.options.output_directory, 'raw_sam')
-        self.logging.info(f"Exporting {len(user_credz)} NTLM credz to {self.options.output_directory}")
+        debug_log = f"Exporting {len(user_credz)} NTLM credz to {self.options.output_directory}"
+        self.logging.info(debug_log)
         if os.path.exists(filename):
             os.remove(filename)
-        for index, cred in enumerate(user_credz):
+        for _index, cred in enumerate(user_credz):
             username, password = cred
             try:
-                f = open(filename, 'ab')
-                f.write(f"{username}:{password}\n".encode('utf-8'))
-                f.close()
-            except Exception as ex:
+                with open(filename, 'ab') as sam_file:
+                    sam_file.write(f"{username}:{password}\n".encode('utf-8'))
+            except OSError as ex:
                 self.logging.error(f"Exception in export raw sam to {filename}")
                 self.logging.debug(ex)
-        self.logging.debug(f"Export Done!")
+        self.logging.debug("Export Done!")
 
     def export_cookies(self):
+        """Export cookies."""
         user_credz = self.get_cookies()
-        filename = os.path.join(self.options.output_directory, 'raw_cookies')
+        filename = Path(self.options.output_directory, 'raw_cookies')
         self.logging.info(f"Exporting {len(user_credz)} cookies to {self.options.output_directory}")
         if os.path.exists(filename):
             os.remove(filename)
-        for index, cred in enumerate(user_credz):
-            name, value, expires_utc, target, type, pillaged_from_computerid, pillaged_from_userid = cred
+        for _index, cred in enumerate(user_credz):
+            name, value, _expires_utc, target, _cred_type, \
+            _pillaged_from_computerid, _pillaged_from_userid = cred
             try:
-                f = open(filename, 'ab')
-                f.write(f"{target}:{name}:{value}\n".encode('utf-8'))
-                f.close()
-            except Exception as ex:
+                with open(filename, 'ab') as cookies_file:
+                    cookies_file.write(f"{target}:{name}:{value}\n".encode('utf-8'))
+            except OSError as ex:
                 self.logging.error(f"Exception in export raw credz to {filename}")
                 self.logging.debug(ex)
-        self.logging.debug(f"Export Done!")
+        self.logging.debug("Export Done!")
 
-    def export_LSA(self):
+    def export_lsa(self):  # TODO not used ?
+        """Export LSA credentials."""
         user_credz = self.get_credz(credz_type='LSA')
-        filename = os.path.join(self.options.output_directory, 'raw_lsa.csv')
-        self.logging.info(f"Exporting {len(user_credz)} LSA secrets to {self.options.output_directory}")
+        filename = Path(self.options.output_directory, 'raw_lsa.csv')
+        debug_log = f"Exporting {len(user_credz)} LSA secrets to {self.options.output_directory}"
+        self.logging.info(debug_log)
         if os.path.exists(filename):
             os.remove(filename)
-        for index, cred in enumerate(user_credz):
-            id, file_path, username, password, target, type, pillaged_from_computerid, pillaged_from_userid = cred
+        for _index, cred in enumerate(user_credz):
+            _cred_id, _file_path, username, password, _target, \
+            _cred_type, pillaged_from_computerid, _pillaged_from_userid = cred
             # Get computer infos
             res = self.get_computer_infos(pillaged_from_computerid)
             if '#' in username:
@@ -814,64 +833,63 @@ class Reporting:
             else:
                 service = ''
             try:
-                for index_, res2 in enumerate(res):
-                    ip, hostname = res2
-                f = open(filename, 'ab')
-                f.write(f"{hostname},{ip},{service},{username},{password}\n".encode('utf-8'))
-                f.close()
-            except Exception as ex:
+                for _index, res2 in enumerate(res):
+                    cred_ip, hostname = res2
+                with open(filename, 'ab') as lsa_file:
+                    data = f"{hostname},{cred_ip},{service},{username},{password}\n"
+                    lsa_file.write(data.encode('utf-8'))
+            except OSError as ex:
                 self.logging.error(f"Exception in export raw LSA Secrets to {filename}")
                 self.logging.debug(ex)
-        self.logging.debug(f"Export Done!")
+        self.logging.debug("Export Done!")
 
     def get_credz_count(self, current_type, extra_conditions=''):
+        """Return credentials count for a given type."""
         with self.conn:
             cur = self.conn.cursor()
-            cur.execute(f"SELECT count(id) FROM credz WHERE LOWER(type)=LOWER('{current_type}') {extra_conditions}")
+            cur.execute("SELECT count(id) FROM credz "
+                        f"WHERE LOWER(type)=LOWER('{current_type}') {extra_conditions}")
             results = cur.fetchall()
         return results
 
     def get_certificates(self, distinct=False):
-        """
-		Return certificates from db
-		"""
+        """Return certificates from Database"""
         if distinct:
             with self.conn:
                 cur = self.conn.cursor()
-                cur.execute(
-                    "SELECT DISTINCT subject,issuer,guid FROM certificates ORDER BY subject DESC, (case when client_auth then 1 else 2 end) asc")
+                cur.execute("SELECT DISTINCT subject, issuer, guid FROM certificates "
+                            "ORDER BY subject DESC, (case when client_auth then 1 else 2 end) ASC")
         else:
             with self.conn:
                 cur = self.conn.cursor()
-                cur.execute(
-                    "SELECT * FROM certificates ORDER BY subject DESC, (case when client_auth then 1 else 2 end) asc")
+                cur.execute("SELECT * FROM certificates "
+                            "ORDER BY subject DESC, (case when client_auth then 1 else 2 end) ASC")
         results = cur.fetchall()
         return results
 
-    def get_credz(self, filterTerm=None, credz_type=None, distinct=False, distinct_sam=False):
-        """
-		Return credentials from the database.
-		"""
+    def get_credz(self, filter_term=None, credz_type=None, distinct=False, distinct_sam=False):
+        """Return credentials from the database."""
         if credz_type:
             with self.conn:
                 cur = self.conn.cursor()
                 cur.execute(f"SELECT * FROM credz WHERE LOWER(type)=LOWER('{credz_type}')")
 
         # if we're filtering by username
-        elif filterTerm and filterTerm != '':
+        elif filter_term and filter_term != '':
             with self.conn:
                 cur = self.conn.cursor()
-                cur.execute("SELECT * FROM users WHERE LOWER(username) LIKE LOWER(?)", ['%{}%'.format(filterTerm)])
+                cur.execute("SELECT * FROM users WHERE LOWER(username) LIKE LOWER(?)",
+                            [f'%{filter_term}%'])
         elif distinct:
             with self.conn:
                 cur = self.conn.cursor()
-                cur.execute(
-                    "SELECT DISTINCT username,password FROM credz WHERE LOWER(type) NOT IN ('sam','lsa','dcc2') AND password NOT IN ('')")
+                cur.execute("SELECT DISTINCT username,password FROM credz WHERE "
+                            "LOWER(type) NOT IN ('sam','lsa','dcc2') AND password NOT IN ('')")
         elif distinct_sam:
             with self.conn:
                 cur = self.conn.cursor()
-                cur.execute(
-                    "SELECT DISTINCT username,password FROM credz WHERE LOWER(type) IN ('sam') AND password NOT IN ('')")
+                cur.execute("SELECT DISTINCT username,password FROM credz WHERE "
+                            "LOWER(type) IN ('sam') AND password NOT IN ('')")
         # otherwise return all credentials
         else:
             with self.conn:
@@ -882,50 +900,61 @@ class Reporting:
         return results
 
     def get_credz_sam(self):
-
-        all = []
+        """Return SAM credentials."""
+        credentials = []
         with self.conn:
             cur = self.conn.cursor()
-            cur.execute(
-                "SELECT count(DISTINCT pillaged_from_computerid),password FROM credz WHERE LOWER(type)=LOWER('SAM') AND LOWER(password) != LOWER('31d6cfe0d16ae931b73c59d7e0c089c0') GROUP BY password ORDER BY username ASC")
+            cur.execute("SELECT count(DISTINCT pillaged_from_computerid), password FROM credz "
+                        "WHERE LOWER(type)=LOWER('SAM') AND "
+                        "LOWER(password) != LOWER('31d6cfe0d16ae931b73c59d7e0c089c0') "
+                        "GROUP BY password ORDER BY username ASC")
         results = cur.fetchall()
 
-        for index, res in enumerate(results):
-            nb, passw = res
-            if nb > 1:
+        for _index, res in enumerate(results):
+            count, passw = res
+            if count > 1:
                 with self.conn:
                     cur = self.conn.cursor()
-                    cur.execute(
-                        "SELECT DISTINCT username, password, type, pillaged_from_computerid FROM credz WHERE LOWER(type)=LOWER('SAM') AND LOWER(password)=LOWER('%s') ORDER BY password ASC, username ASC " % (
-                            passw))
-                all += cur.fetchall()
-        return all
+                    cur.execute("SELECT DISTINCT username, password, type, "
+                                "pillaged_from_computerid FROM credz "
+                                "WHERE LOWER(type)=LOWER('SAM') AND LOWER(password)"
+                                f"=LOWER('{passw}') ORDER BY password ASC, username ASC ")
+                credentials += cur.fetchall()
+        return credentials
 
     def get_computers(self):
+        """Return all computers."""
         with self.conn:
             cur = self.conn.cursor()
-            cur.execute(
-                "SELECT ip,hostname,domain,os,smb_signing_enabled,smbv1_enabled,is_admin,connectivity from computers ORDER BY ip")
+            cur.execute("SELECT ip, hostname, domain, os, smb_signing_enabled, smbv1_enabled, "
+                        "is_admin, connectivity from computers ORDER BY ip")
         results = cur.fetchall()
         return results
 
     def get_browser_version(self, browser_type, pillaged_from_computerid, pillaged_from_userid):
+        """Return all browser versions."""
         with self.conn:
             cur = self.conn.cursor()
-            cur.execute(
-                f"SELECT version from browser_version WHERE browser_type LIKE '{browser_type}' AND pillaged_from_computerid='{pillaged_from_computerid}' AND pillaged_from_userid='{pillaged_from_userid}' LIMIT 1")
+            cur.execute(f"SELECT version from browser_version WHERE browser_type "
+                        f"LIKE '{browser_type}' AND pillaged_from_computerid="
+                        f"'{pillaged_from_computerid}' AND pillaged_from_userid="
+                        f"'{pillaged_from_userid}' LIMIT 1")
         results = cur.fetchall()
         return results
 
     def get_masterkeys(self):
+        """Return all master keys."""
         with self.conn:
             cur = self.conn.cursor()
-            cur.execute(
-                "SELECT id,file_path,guid,status,pillaged_from_computerid,pillaged_from_userid,decrypted_with,decrypted_value from masterkey ORDER BY pillaged_from_computerid ASC, pillaged_from_userid ASC")
+            cur.execute("SELECT id, file_path, guid, status, pillaged_from_computerid, "
+                        "pillaged_from_userid, decrypted_with, decrypted_value "
+                        "FROM masterkey ORDER BY pillaged_from_computerid ASC, "
+                        "pillaged_from_userid ASC")
         results = cur.fetchall()
         return results
 
     def get_computer_infos(self, computer_id):
+        """Return computer informations for a given id. """
         with self.conn:
             cur = self.conn.cursor()
             cur.execute(f"SELECT ip,hostname FROM computers WHERE id={computer_id} LIMIT 1")
@@ -933,6 +962,7 @@ class Reporting:
         return results
 
     def get_user_infos(self, user_id):
+        """Return user informations for a given id. """
         with self.conn:
             cur = self.conn.cursor()
             cur.execute(f"SELECT username FROM users WHERE id={user_id} LIMIT 1")
@@ -940,6 +970,7 @@ class Reporting:
         return results
 
     def get_user_id(self, username):
+        """Return user id for a given username. """
         with self.conn:
             cur = self.conn.cursor()
             cur.execute(f"SELECT id FROM users WHERE username={username} LIMIT 1")
@@ -947,32 +978,38 @@ class Reporting:
         return results
 
     def get_connected_user(self):
+        """Return connected users. """
         with self.conn:
             cur = self.conn.cursor()
-            cur.execute(f"SELECT ip,username FROM connected_user ORDER BY username ASC, ip ASC")
+            cur.execute("SELECT ip, username FROM connected_user ORDER BY username ASC, ip ASC")
             results = cur.fetchall()
         return results
 
-    def get_os_from_ip(self, ip):
+    def get_os_from_ip(self, user_ip):
+        """Return OS for a given IP."""
         with self.conn:
             cur = self.conn.cursor()
-            cur.execute(f"SELECT os FROM computers WHERE ip={ip} LIMIT 1")
+            cur.execute(f"SELECT os FROM computers WHERE ip={user_ip} LIMIT 1")
             results = cur.fetchall()
         return results
 
     def get_file(self):
+        """Return extracted files."""
         with self.conn:
             cur = self.conn.cursor()
-            cur.execute(
-                f"SELECT file_path,filename,extension,pillaged_from_computerid,pillaged_from_userid  FROM files ORDER BY pillaged_from_computerid ASC, extension ASC ")
+            cur.execute("SELECT file_path, filename, extension, pillaged_from_computerid, "
+                        "pillaged_from_userid  FROM files ORDER BY "
+                        "pillaged_from_computerid ASC, extension ASC")
             results = cur.fetchall()
         return results
 
     def get_cookies(self):
+        """Return extracted cookies. """
         with self.conn:
             cur = self.conn.cursor()
-            cur.execute(
-                f"SELECT name,value,expires_utc,target,type,pillaged_from_computerid,pillaged_from_userid  FROM cookies ORDER BY pillaged_from_computerid ASC, pillaged_from_userid ASC, target ASC, expires_utc DESC ")
+            cur.execute("SELECT name, value, expires_utc, target,type, "
+                        "pillaged_from_computerid, pillaged_from_userid "
+                        "FROM cookies ORDER BY pillaged_from_computerid ASC, "
+                        "pillaged_from_userid ASC, target ASC, expires_utc DESC")
             results = cur.fetchall()
         return results
-
