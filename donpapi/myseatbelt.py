@@ -27,7 +27,7 @@ from donpapi.software.sysadmin.vnc import Vnc
 from donpapi.lib.toolbox import is_guid
 from donpapi.myusers import *
 from donpapi.lib.fileops import MyRegOps
-from donpapi.database import database
+from donpapi.database import Database
 from donpapi.lib.new_module import *
 from donpapi.lib.RecentFiles import *
 from donpapi.lib.adconnect import *

@@ -64,17 +64,17 @@ class Reporting:
             dp_config = Path(my_path, "config", "donpapi_config.json")
             with open(dp_config, encoding="utf-8", mode="r") as config:
                 config_parser = json.load(config)
-            css_path = Path(my_path, config_parser['css'])
-            logo_path = Path(my_path, config_parser['logo_login'])
+            css_path = Path(my_path, "res", config_parser['css'])
+            logo_path = Path(my_path, "res", config_parser['logo_login'])
             with open(css_path, encoding="utf-8", mode="r") as css_file:
                 mycss = css_file.read()
-            with open(logo_path, encoding="utf-8", mode="rb") as logo_file:
+            with open(logo_path, mode="rb") as logo_file:
                 logo_login = base64.b64encode(logo_file.read()).decode('utf-8')
         except OSError as ex:
             error = f" Exception {bcolors.WARNING}  in generate_report() {bcolors.ENDC}"
             self.logging.debug(error)
             self.logging.debug(ex)
-
+        
         self.logging.info(f"[+] Generating report : {self.report_file}")
 
         # Verify SQL database
