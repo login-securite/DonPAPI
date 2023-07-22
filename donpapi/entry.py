@@ -17,18 +17,18 @@
 #  @Byt3bl3d33r for CME (lots of inspiration and code comes from CME : https://github.com/byt3bl33d3r/CrackMapExec )
 #  All the Team of @LoginSecurite for their help in debugging my shity code (special thanks to @layno & @HackAndDo for that)
 
-#
-from __future__ import division
-from __future__ import print_function
-import sys
+import argparse
+import json
 import logging
-import argparse,os,re,json,sqlite3
-from donpapi.myseatbelt import MySeatBelt
+import os
+import re
+import sqlite3
+import sys
 import concurrent.futures
-from donpapi.lib.toolbox import split_targets,bcolors
-from donpapi.database import database, Reporting
-from datetime import date
-
+from donpapi.myseatbelt import MySeatBelt
+from donpapi.database import Database
+from donpapi.reporting import Reporting
+from donpapi.lib.toolbox import split_targets
 
 global assets
 assets={}
@@ -258,7 +258,7 @@ def first_run(options):
         # try to prevent some of the weird sqlite I/O errors
         c.execute('PRAGMA journal_mode = OFF')
         c.execute('PRAGMA foreign_keys = 1')
-        database(conn, logging).db_schema(c)
+        Database(conn, logging).db_schema(c)
         #getattr(protocol_object, 'database').db_schema(c)
         # commit the changes and close everything off
         conn.commit()
