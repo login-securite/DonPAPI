@@ -270,7 +270,7 @@ def seatbelt_thread(datas):
 		if mysb.admin_privs:
 			mysb.do_test()
 			# mysb.run()
-			#mysb.quit()
+			#mysb.close_smb()
 		else:
 			logging.debug("[*] No ADMIN account on target {ip}".format(ip=target))
 

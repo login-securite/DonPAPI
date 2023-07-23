@@ -148,50 +148,56 @@ class MySeatBelt:
         return True
 
     def create_conn_obj(self):
-        # self.logging.info(f"[{self.options.target_ip}] [-] initialising smb connection to {self.options.domain} / {self.options.username} : {self.options.password}, @ {self.options.dc_ip} , Hash : {self.options.lmhash} : {self.options.nthash}, AESKey {self.options.aesKey}")
-        self.logging.debug(f"[{self.options.target_ip}] [-] initialising smb connection ...")
+        """Create connection object."""
+        # self.logging.info(f"[{self.options.target_ip}] [-] Initializing SMB connection " \
+        #                   f"to {self.options.domain} / {self.options.username} : " \
+        #                   f"{self.options.password}, @ {self.options.dc_ip} , Hash : " \
+        #                   f"{self.options.lmhash} : {self.options.nthash}, " \
+        #                   f"AESKey {self.options.aesKey}")
+        self.logging.debug(f"[{self.options.target_ip}] [-] Initializing SMB connection ...")
         if self.create_smbv1_conn():
             return True
-        elif self.create_smbv3_conn():
+        if self.create_smbv3_conn():
             return True
-
         return False
 
-    def quit(self):
+    def close_smb(self):
+        """Close SMB connection."""
         try:
-            self.logging.debug(f"[{self.options.target_ip}] [-] initialising smb close ...")
+            self.logging.debug(f"[{self.options.target_ip}] [-] Closing SMB connection ...")
             # self.myfileops.close()
             # self.myregops.close()
             # self.smb.close()
-            self.logging.debug(f"[{self.options.target_ip}] [-]  smb closed ...")
-        except Exception as e:
+            self.logging.debug(f"[{self.options.target_ip}] [-] SMB closed ...")
+        except Exception:
             self.logging.debug('Error in closing SMB connection')
             return False
 
     def get_laps(self):
+        """Get LAPS."""
         try:
-            self.logging.debug(
-                f"[{self.options.target_ip}] [-] Using LAPS to get Local admin password on {self.options.hostname} - domain {self.options.domain} : dcip {self.options.dc_ip}")
-            ldap_domain = ''
-            ldap_domain_parts = self.options.domain.split('.')
-            for part in ldap_domain_parts:
-                ldap_domain += f"dc={part},"
-            ldap_domain = ldap_domain[:-1]
+            self.logging.debug(f"[{self.options.target_ip}] [-] Using LAPS to get Local " \
+                               f"admin password on {self.options.hostname} - domain " \
+                               f"{self.options.domain} : dcip {self.options.dc_ip}")
+            ldap_domain = 'dc='
+            ldap_domain += ",dc=".join(self.options.domain.split('.').split('.'))
 
-            if self.options.dc_ip != None:
-                s = Server(self.options.dc_ip, get_info=ALL)
+            if self.options.dc_ip is not None:
+                srv = Server(self.options.dc_ip, get_info=ALL)
             else:
-                s = Server(self.options.domain, get_info=ALL)
-            c = Connection(s, user=self.options.domain + "\\" + self.options.username, password=self.options.password,
-                           authentication=NTLM, auto_bind=True)
-            c.search(search_base=f"{ldap_domain}",
-                     search_filter=f'(&(cn={self.options.hostname})(ms-MCS-AdmPwd=*))',
-                     attributes=['ms-MCS-AdmPwd', 'SAMAccountname'])
-            self.logging.debug(
-                f"[{self.options.target_ip}] [-] Using LAPS to get Local admin password on {self.options.hostname} - {ldap_domain} - got {len(c.entries)} match")
-            if len(c.entries) == 1:
+                srv = Server(self.options.domain, get_info=ALL)
+            conn = Connection(srv, user=self.options.domain + "\\" + self.options.username,
+                              password=self.options.password, authentication=NTLM,
+                              auto_bind=True)
+            conn.search(search_base=f"{ldap_domain}",
+                        search_filter=f'(&(cn={self.options.hostname})(ms-MCS-AdmPwd=*))',
+                        attributes=['ms-MCS-AdmPwd', 'SAMAccountname'])
+            self.logging.debug(f"[{self.options.target_ip}] [-] Using LAPS to get Local " \
+                               f"admin password on {self.options.hostname} - " \
+                               f"{ldap_domain} - got {len(conn.entries)} match")
+            if len(conn.entries) == 1:
                 # for entry in c.entries[0]:
-                entry = c.entries[0]
+                entry = conn.entries[0]
                 # self.options.username = str(entry['sAMAccountName'])
                 self.options.password = str(entry['ms-Mcs-AdmPwd'])
                 # self.username = self.options.username
@@ -202,7 +208,8 @@ class MySeatBelt:
             else:
                 return False
         except Exception as ex:
-            self.logging.debug(f"[{self.options.target_ip}] Exception {bcolors.WARNING}  in get LAPS {bcolors.ENDC}")
+            self.logging.debug(f"[{self.options.target_ip}] Exception {bcolors.WARNING} " \
+                               f"in get LAPS {bcolors.ENDC}")
             self.logging.debug(ex)
             return False
 
@@ -2308,7 +2315,7 @@ class MySeatBelt:
                 # user.resume_secrets()
                 # else:
                 # NOT ADMIN
-                self.quit()
+                self.close_smb()
 
 
         except Exception as ex:
