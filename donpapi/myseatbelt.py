@@ -86,7 +86,7 @@ class MySeatBelt:
 
 	def init_connect(self):
 		try:
-			self.db = database(sqlite3.connect(self.options.db_path, check_same_thread=False), self.logging)
+			self.db = Database(sqlite3.connect(self.options.db_path, check_same_thread=False), self.logging)
 			if self.create_conn_obj():
 				# self.do_info_rpc_unauth()
 				self.do_info_unauth()
