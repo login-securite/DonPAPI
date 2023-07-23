@@ -7,8 +7,9 @@ MySeatBelt module contain MySeatBelt class.
 """
 
 import copy
-import socket
 import impacket
+import socket
+import sqlite3
 from pathlib import Path
 from ldap3 import ALL, Server, Connection, NTLM
 
@@ -96,7 +97,8 @@ class MySeatBelt:
     def init_connect(self):
         """Init SQLite connection."""
         try:
-            self.db = database(sqlite3.connect(self.options.db_path, check_same_thread=False), self.logging)
+            sqlite_database = sqlite3.connect(self.options.db_path, check_same_thread=False)
+            self.db = database(sqlite_database, self.logging)
             if self.create_conn_obj():
                 # self.do_info_rpc_unauth()
                 self.do_info_unauth()
@@ -110,34 +112,37 @@ class MySeatBelt:
             else:
                 return False
             return False
-        except Exception as e:
-            self.logging.debug('Error init connect')
+        except Exception:
+            self.logging.debug("Error init connect")
             return False
 
     def create_smbv1_conn(self):
+        """Create SMBv1 connection."""
         try:
-            self.smb = SMBConnection(self.host, self.host, None, self.options.port, preferredDialect=SMB_DIALECT,
-                                     timeout=self.options.timeout)
+            self.smb = SMBConnection(self.host, self.host, None, self.options.port,
+                                     preferredDialect=SMB_DIALECT, timeout=self.options.timeout)
             self.smbv1 = True
-            logging.debug('SMBv1 OK on {} - {}'.format(self.host, self.options.target_ip))
-        except socket.error as e:
-            if str(e).find('Connection reset by peer') != -1:
-                logging.debug('SMBv1 might be disabled on {}'.format(self.host))
+            self.logging.debug(f"SMBv1 OK on {self.host} - {self.options.target_ip}")
+        except socket.error as exc:
+            if "Connection reset by peer" in str(exc):
+                self.logging.debug(f"SMBv1 might be disabled on {self.host}")
             return False
-        except Exception as e:
-            logging.debug('Error creating SMBv1 connection to {}: {}'.format(self.host, e))
+        except Exception as exc:
+            self.logging.debug(f"Error creating SMBv1 connection to {self.host}: {str(exc)}")
             return False
 
         return True
 
     def create_smbv3_conn(self):
+        """Create SMBv3 connection."""
         try:
-            self.smb = SMBConnection(self.host, self.host, None, self.options.port, timeout=self.options.timeout)
+            self.smb = SMBConnection(self.host, self.host, None, self.options.port,
+                                     timeout=self.options.timeout)
             self.smbv1 = False
-            logging.debug('SMBv3 OK on {} - {}'.format(self.host, self.options.target_ip))
-        except Exception as e:
-            self.logging.debug('Error creating SMBv3 connection to {}: {}'.format(self.host, e))
-            self.db.add_computer(ip=self.host, connectivity=f"{e}")
+            logging.debug(f"SMBv3 OK on {self.host} - {self.options.target_ip}")
+        except Exception as exc:
+            self.logging.debug(f"Error creating SMBv3 connection to {self.host}: {exc}")
+            self.db.add_computer(ip=self.host, connectivity=f"{exc}")
             return False
 
         return True
