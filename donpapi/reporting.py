@@ -15,6 +15,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from donpapi.lib.toolbox import bcolors
 
+
 class Reporting:
     """Reporting class, generate multiple reports."""
     def __init__(self, conn, logger, options, targets):
@@ -74,7 +75,7 @@ class Reporting:
             error = f" Exception {bcolors.WARNING}  in generate_report() {bcolors.ENDC}"
             self.logging.debug(error)
             self.logging.debug(ex)
-        
+
         self.logging.info(f"[+] Generating report : {self.report_file}")
 
         # Verify SQL database
@@ -93,16 +94,16 @@ class Reporting:
             return False
 
         data = f"""<!DOCTYPE html>
-			<html>
-			<head>
-			  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-			  <title>DonPapi - Results</title>
+            <html>
+            <head>
+              <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+              <title>DonPapi - Results</title>
               <style>
                 {mycss}
               </style>
-			</head>
-			<body onload="toggleAll()">
-			\n"""
+            </head>
+            <body onload="toggleAll()">
+            \n"""
 
         self.add_to_resultpage(data)
 
@@ -132,60 +133,60 @@ class Reporting:
 
         # JS Stuff
         data = """
-		<script>
-		function toggle_by_class(cls, on) {
-	    	var lst = document.getElementsByClassName(cls);
-    		for(var i = 0; i < lst.length; ++i) {
-        		lst[i].style.display = on ? '' : 'none';
-    		}
-		}
+        <script>
+        function toggle_by_class(cls, on) {
+            var lst = document.getElementsByClassName(cls);
+            for(var i = 0; i < lst.length; ++i) {
+                lst[i].style.display = on ? '' : 'none';
+            }
+        }
 
-		function toggle_it(thisname) {
-		 tr=document.getElementsByTagName('tr')
-		 for (i=0;i<tr.length;i++){
-		  if (tr[i].getAttribute(thisname)){
-		   if ( tr[i].style.display=='none' ){
-			 tr[i].style.display = '';
-		   }
-		   else {
-			tr[i].style.display = 'none';
-		   }
-		  }
-		 }
-		}
+        function toggle_it(thisname) {
+         tr=document.getElementsByTagName('tr')
+         for (i=0;i<tr.length;i++){
+          if (tr[i].getAttribute(thisname)){
+           if ( tr[i].style.display=='none' ){
+             tr[i].style.display = '';
+           }
+           else {
+            tr[i].style.display = 'none';
+           }
+          }
+         }
+        }
 
-		function toggleAll() {
-		toggle_it("cookies");
-		toggle_it("wifi");
-		toggle_it("taskscheduler");
-		toggle_it("credential-blob");
-		toggle_it("browser-internet_explorer");
-		toggle_it("browser-firefox");
-		toggle_it("browser-chrome");
-		toggle_it("SAM");
-		toggle_it("LSA");
-		toggle_it("DCC2");
-		toggle_it("VNC");
-		toggle_it("MRemoteNG");
-		}
+        function toggleAll() {
+        toggle_it("cookies");
+        toggle_it("wifi");
+        toggle_it("taskscheduler");
+        toggle_it("credential-blob");
+        toggle_it("browser-internet_explorer");
+        toggle_it("browser-firefox");
+        toggle_it("browser-chrome");
+        toggle_it("SAM");
+        toggle_it("LSA");
+        toggle_it("DCC2");
+        toggle_it("VNC");
+        toggle_it("MRemoteNG");
+        }
 
-		function CopyToClipboard(data_to_copy) {
-		const dummy = document.createElement('textarea');
-		dummy.style.position = 'absolute';
-		dummy.style.left = '-9999px';
-		dummy.style.top = '-9999px';
-		document.body.appendChild(dummy);
-		dummy.value = data_to_copy;
-		dummy.select();
-		document.execCommand('copy');
-		document.body.removeChild(dummy);
-		// Copy the text inside the text field
-		//navigator.clipboard.writeText(data_to_copy);
-		//alert("Copied the text: " + data_to_copy);
-		}
-		</script>
+        function CopyToClipboard(data_to_copy) {
+        const dummy = document.createElement('textarea');
+        dummy.style.position = 'absolute';
+        dummy.style.left = '-9999px';
+        dummy.style.top = '-9999px';
+        document.body.appendChild(dummy);
+        dummy.value = data_to_copy;
+        dummy.select();
+        document.execCommand('copy');
+        document.body.removeChild(dummy);
+        // Copy the text inside the text field
+        //navigator.clipboard.writeText(data_to_copy);
+        //alert("Copied the text: " + data_to_copy);
+        }
+        </script>
 
-		"""
+        """
 
         self.add_to_resultpage(data)
 
@@ -203,17 +204,17 @@ class Reporting:
                 credz_content.append('Winscp')
 
             data = """<table class="statistics"><tr>
-			<th><a class="firstletter">U</a><a>sername</a></th>
-			<th><a class="firstletter">P</a><a>assword</a></th>
-			<th><a class="firstletter">T</a><a>arget</a></th>
-			<th><a class="firstletter">T</a><a>ype</a></th>
-			<th><a class="firstletter">P</a><a>illaged_from_computerid</a></th>
-			<th><a class="firstletter">P</a><a>illaged_from_userid</a></th></tr>\n"""
+            <th><a class="firstletter">U</a><a>sername</a></th>
+            <th><a class="firstletter">P</a><a>assword</a></th>
+            <th><a class="firstletter">T</a><a>arget</a></th>
+            <th><a class="firstletter">T</a><a>ype</a></th>
+            <th><a class="firstletter">P</a><a>illaged_from_computerid</a></th>
+            <th><a class="firstletter">P</a><a>illaged_from_userid</a></th></tr>\n"""
 
             current_type = ''
             for index, credentials in enumerate(results):
                 _, file_path, username, password, target, \
-                creds_type, pillaged_from_computerid, pillaged_from_userid = credentials
+                   creds_type, pillaged_from_computerid, pillaged_from_userid = credentials
 
                 # filtering data to be included in the report
                 if creds_type not in credz_content:
@@ -226,7 +227,6 @@ class Reporting:
                                      "LegacyGeneric:target=msteams_adalsso/adal_contex"]
                 untreated_users = ["NL$KM_history"]
 
-
                 if creds_type != current_type:
                     current_type = creds_type
                     query = f"""AND username NOT IN ("{'","'.join(untreated_users)}") """
@@ -237,8 +237,8 @@ class Reporting:
                     data += f"""({current_type_count})</a></td></tr>"""
 
                 # blacklist_bypass
-                if (len(set(untreated_targets) & set(target)) or \
-                    len(set(untreated_users) & set(username))):
+                if (len(set(untreated_targets) & set(target)) or
+                   len(set(untreated_users) & set(username))):
                     continue
 
                 # Get computer infos
@@ -261,7 +261,7 @@ class Reporting:
                 else:
                     special_style = ""
 
-                ### Print block
+                # Print block
                 # recover username from target
                 # TODO: update myseatbelt.py to make a clean function dump_CREDENTIAL_XXXXX
 
@@ -273,7 +273,7 @@ class Reporting:
                 try:
                     hex_passw = ''
                     hex_passw = binascii.unhexlify(password).replace(b'>', b'')
-                except binascii.Error as _:
+                except binascii.Error:
                     hex_passw = password
 
                 data += f'<TD {special_style} ><A title="{username}"> {username[:48]} </a></td>'
@@ -306,19 +306,19 @@ class Reporting:
 
             data += """</table><br>"""
             self.add_to_resultpage(data)
-        ###
+        #
 
         if 'certificates' in report_content:
             results = self.get_certificates()
 
             data = """
-					<table class="statistics"><tr>
-					<Th style="text-align: center"><a class="firstletter">I</a><a>ssuer</a></th>
-					<Th style="text-align: center"><a class="firstletter">S</a><a>ubject</a></th>
-					<Th style="text-align: center"><a class="firstletter">P</a><a>illaged from</a></th>
-					<Th style="text-align: center"><a class="firstletter">P</a><a>illaged with</a></th>
-					<Th style="text-align: center"><a class="firstletter">C</a><a>lient auth</a></th></tr>\n
-					"""
+                    <table class="statistics"><tr>
+                    <Th style="text-align: center"><a class="firstletter">I</a><a>ssuer</a></th>
+                    <Th style="text-align: center"><a class="firstletter">S</a><a>ubject</a></th>
+                    <Th style="text-align: center"><a class="firstletter">P</a><a>illaged from</a></th>
+                    <Th style="text-align: center"><a class="firstletter">P</a><a>illaged with</a></th>
+                    <Th style="text-align: center"><a class="firstletter">C</a><a>lient auth</a></th></tr>\n
+                    """
 
             current_type = 'certificates'
             data += """<TR id=certificates><TD colspan="6" class="toggle_menu" """
@@ -326,7 +326,7 @@ class Reporting:
             data += f"""({len(results)})</a></td></tr>"""
             for index, cred in enumerate(results):
                 _, pfx_filepath, guid, issuer, subject, \
-                client_auth, pillaged_from_computerid, pillaged_from_userid = cred[7]
+                   client_auth, pillaged_from_computerid, pillaged_from_userid = cred[7]
 
                 computer_ip, hostname = list(self.get_computer_infos(pillaged_from_computerid))[0]
                 computer_info = f"{computer_ip} | {hostname}"
@@ -344,7 +344,7 @@ class Reporting:
 
                 special_style = ""
 
-                ###Print block
+                # Print block
                 for info in [issuer, subject, computer_info, pillaged_from_userid]:
                     data += f"""<td><A title="{info}"> {str(info)[:48]} </a></td>"""
                 for info in [client_auth]:
@@ -358,19 +358,19 @@ class Reporting:
             data += """</table><br>"""
             self.add_to_resultpage(data)
 
-        ##### List cookies
+        # List cookies
         if 'cookies' in report_content:
             results = self.get_cookies()
 
             data = """<table class="statistics"><tr>
-					<th><a class="firstletter">N</a><a>ame</a></th>
-					<th><a class="firstletter">V</a><a>alue</a></th>
-					<th><a class="firstletter">U</a><a>ntil</a></th>
-					<th><a class="firstletter">T</a><a>arget</a></th>
-					<th><a class="firstletter">T</a><a>ype</a></th>
-					<th><a class="firstletter">P</a><a>illaged_from_computerid</a></th>
-					<th><a class="firstletter">P</a><a>illaged_from_userid</a></th>
-					<th><a class="firstletter">B</a><a>ypass MFA</a></th></tr>\n"""
+                    <th><a class="firstletter">N</a><a>ame</a></th>
+                    <th><a class="firstletter">V</a><a>alue</a></th>
+                    <th><a class="firstletter">U</a><a>ntil</a></th>
+                    <th><a class="firstletter">T</a><a>arget</a></th>
+                    <th><a class="firstletter">T</a><a>ype</a></th>
+                    <th><a class="firstletter">P</a><a>illaged_from_computerid</a></th>
+                    <th><a class="firstletter">P</a><a>illaged_from_userid</a></th>
+                    <th><a class="firstletter">B</a><a>ypass MFA</a></th></tr>\n"""
 
             # <a href="#" id="toggle" onClick="toggle_it('tr1');toggle_it('tr2')">
             current_type = 'cookies'
@@ -384,7 +384,7 @@ class Reporting:
             groupindex = 0
             for index_, cred_ in enumerate(results):
                 name_, value_, expires_utc, target, _type, \
-                pillaged_from_computerid, pillaged_from_userid = cred_
+                    pillaged_from_computerid, pillaged_from_userid = cred_
 
                 if target == previous_target and \
                    pillaged_from_userid == previous_userid and \
@@ -402,7 +402,7 @@ class Reporting:
                     groupindex += 1
                     for index, cred in temp:
                         name, value, expires_utc, target, type_cred, \
-                        pillaged_from_computerid, pillaged_from_userid = cred
+                              pillaged_from_computerid, pillaged_from_userid = cred
                         # Skip infos of
                         log_debug = f" analysing cookie  {bcolors.WARNING}  {name} {value} "
                         log_debug += f"{type_cred} {target} UTC:{expires_utc} {bcolors.ENDC}"
@@ -411,16 +411,16 @@ class Reporting:
                             if value == '':
                                 continue
                             utc_time = (datetime(1601, 1, 1) + timedelta(microseconds=expires_utc))
-                            if (type_cred == "browser-chrome" and (expires_utc != 0) and \
+                            if (type_cred == "browser-chrome" and (expires_utc != 0) and
                                 utc_time < datetime.today()) or \
-                               (type_cred != "browser-chrome" and \
-                                datetime.fromtimestamp(expires_utc) < datetime.today()):
+                               (type_cred != "browser-chrome" and
+                               datetime.fromtimestamp(expires_utc) < datetime.today()):
                                 log_debug = f" Skipping old cookie  {bcolors.WARNING}  {name} "
                                 log_debug += f"{value} {type_cred} {target} {expires_utc} "
                                 log_debug += f"{bcolors.ENDC}"
                                 self.logging.debug(log_debug)
                                 continue
-                        #####
+                        #
                         except OSError as ex:
                             error = f" Exception {bcolors.WARNING} Exception in Cookie "
                             error += f" {name} {value} {type_cred} {target}"
@@ -432,9 +432,11 @@ class Reporting:
                         # self.logging.debug(f'get browser type browser_type={type_cred},
                         # pillaged_from_computerid={pillaged_from_computerid},
                         # pillaged_from_userid={pillaged_from_userid}')
-                        res = self.get_browser_version(browser_type=type_cred,
+                        res = self.get_browser_version(
+                                browser_type=type_cred,
                                 pillaged_from_computerid=pillaged_from_computerid,
-                                pillaged_from_userid=pillaged_from_userid)
+                                pillaged_from_userid=pillaged_from_userid
+                        )
                         if len(res) > 0:
                             type_cred += f" - {res[0]}"
                         # self.logging.debug(f'Type:{type}')
@@ -456,16 +458,17 @@ class Reporting:
                         else:
                             data += f"""<TR class=tableau_resultat_row1 {current_type}=1>"""
 
-                        ###Print block
-                        if name.lower() in ['estsauthpersistant', 'estsauth', 'sid',
-                            'aws-userinfo', 'aws-credz', 'osid', 'hsid', 'ssid', 
+                        # Print block
+                        name_list = [
+                            'estsauthpersistant', 'estsauth', 'sid',
+                            'aws-userinfo', 'aws-credz', 'osid', 'hsid', 'ssid',
                             'apisid', 'sapisid', 'lsid', 'sub_session_onelogin',
-                            'sub_session_onelogin.com', 'user_session']:
+                            'sub_session_onelogin.com', 'user_session']
+                        if name.lower() in name_list:
                             special_style = '''class="cracked"'''
                         else:
                             special_style = ""
-
-                            ### On supprime les cookies expirés
+                            # On supprime les cookies expirés
                             for info in [name, value]:
                                 data += f"""<td {special_style} ><a title="{info}">"""
                                 data += f"""{str(info)[:48]}</a></td>"""
@@ -523,7 +526,7 @@ class Reporting:
             data += """</table><br>"""
             self.add_to_resultpage(data)
 
-        ##### List gathered files
+        # List gathered files
         if 'files' in report_content:
             results = self.get_file()
 
@@ -535,7 +538,7 @@ class Reporting:
             for index, myfile in enumerate(results):
                 try:
                     file_path, filename, extension, \
-                    pillaged_from_computerid, pillaged_from_userid = myfile
+                               pillaged_from_computerid, pillaged_from_userid = myfile
 
                     res = self.get_computer_infos(pillaged_from_computerid)
                     for index, res2 in enumerate(res):
@@ -557,7 +560,7 @@ class Reporting:
             data += """</table><br>"""
             self.add_to_resultpage(data)
 
-        ##### Identify user / IP relations
+        # Identify user / IP relations
         # Confirm audited scope :
         if 'connected_user' in report_content:
             results = self.get_connected_user()
@@ -578,7 +581,7 @@ class Reporting:
             data += """</table><br>"""
             self.add_to_resultpage(data)
 
-        ##### Identify Local hash reuse
+        # Identify Local hash reuse
         if 'hash_reuse' in report_content:
             results = self.get_credz_sam()
             data = """<table class="statistics" id="Local_account_reuse"><tr>
@@ -611,7 +614,7 @@ class Reporting:
 
             for index, cred in enumerate(results):
                 ip_cred, hostname, domain, my_os, \
-                smb_signing_enabled, smbv1_enabled, is_admin, connectivity = cred
+                         smb_signing_enabled, smbv1_enabled, is_admin, connectivity = cred
                 data += "<tr>"
                 for info in [ip_cred, hostname, domain, my_os]:
                     data += f"""<td> {info} </td>"""
@@ -648,7 +651,7 @@ class Reporting:
 
             for index, cred in enumerate(results):
                 _cred_id, file_path, guid, status, pillaged_from_computerid, \
-                pillaged_from_userid, decrypted_with, decrypted_value = cred
+                          pillaged_from_userid, decrypted_with, decrypted_value = cred
                 data += "<tr>"
                 for info in [guid, status, decrypted_with]:
                     data += f"""<td> {info} </td>"""
@@ -670,7 +673,6 @@ class Reporting:
         # finalise result page
         data = "</body></html>"
         self.add_to_resultpage(data)
-
 
     def get_dpapi_hashes(self):
         """Get DPAPI hashes from database."""
@@ -805,7 +807,7 @@ class Reporting:
             os.remove(filename)
         for _index, cred in enumerate(user_credz):
             name, value, _expires_utc, target, _cred_type, \
-            _pillaged_from_computerid, _pillaged_from_userid = cred
+                  _pillaged_from_computerid, _pillaged_from_userid = cred
             try:
                 with open(filename, 'ab') as cookies_file:
                     cookies_file.write(f"{target}:{name}:{value}\n".encode('utf-8'))
@@ -824,7 +826,7 @@ class Reporting:
             os.remove(filename)
         for _index, cred in enumerate(user_credz):
             _cred_id, _file_path, username, password, _target, \
-            _cred_type, pillaged_from_computerid, _pillaged_from_userid = cred
+                      _cred_type, pillaged_from_computerid, _pillaged_from_userid = cred
             # Get computer infos
             res = self.get_computer_infos(pillaged_from_computerid)
             if '#' in username:
