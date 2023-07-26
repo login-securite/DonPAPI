@@ -38,7 +38,7 @@ pip install donpapi
 
 or
 
-```
+```bash
 git clone https://github.com/login-securite/DonPAPI.git
 cd DonPAPI
 python3 -m pip install .
@@ -47,11 +47,19 @@ DonPAPI
 
 or
 
-```
+```bash
+# make shure that "swig" is installed and available in your path to build "m2crypto" correctly
 git clone git+https://github.com/login-securite/DonPAPI.git
 cd DonPAPI
 poetry update
 poetry run DonPAPI
+```
+
+or
+
+```bash
+# make shure that "swig" is installed and available in your path to build "m2crypto" correctly
+pipx install git+https://github.com/login-securite/DonPAPI.git
 ```
 
 ## Helper 
