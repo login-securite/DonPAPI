@@ -34,23 +34,20 @@ We made a talk in french about DPAPI called **DPAPI - Don't Put Administration P
 
 ***This tool should be install with [pipx](https://pypi.org/project/pipx/) or in a dedicated virtual environment***
 
-```
+```bash
 pipx install donpapi
 DonPAPI
 ```
 
-or
+or (with latest commits)
 
-```
-git clone https://github.com/login-securite/DonPAPI.git
-cd DonPAPI
-python3 -m pipx install .
-DonPAPI
+```bash
+pipx install git+https://github.com/login-securite/DonPAPI.git
 ```
 
-or
+or (to dev)
 
-```
+```bash
 git clone git+https://github.com/login-securite/DonPAPI.git
 cd DonPAPI
 poetry update
