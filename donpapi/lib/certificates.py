@@ -321,7 +321,7 @@ class CertificatesTriage():
             except Exception as e:
                 pass
             self.db.add_certificate(guid=cert.filename, pfx_file_path=full_path, issuer=str(cert.cert.issuer.rfc4514_string()), subject=str(cert.cert.subject.rfc4514_string()), client_auth=cert.clientauth, pillaged_from_computer_ip=self.options.target_ip, pillaged_from_username=cert.user.username)
-        if not self.options.no_remoteops
+        if not self.options.no_remoteops:
             for user in self.users:
                 if user.username == 'MACHINE$':
                     system_certificates = self.triage_system_certificates(user)
