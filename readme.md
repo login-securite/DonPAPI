@@ -32,8 +32,11 @@ We made a talk in french about DPAPI called **DPAPI - Don't Put Administration P
 
 ## Installation
 
+***This tool should be install with [pipx](https://pypi.org/project/pipx/) or in a dedicated virtual environment***
+
 ```
-pip install donpapi
+pipx install donpapi
+DonPAPI
 ```
 
 or
@@ -41,7 +44,7 @@ or
 ```
 git clone https://github.com/login-securite/DonPAPI.git
 cd DonPAPI
-python3 -m pip install .
+python3 -m pipx install .
 DonPAPI
 ```
 
@@ -61,10 +64,10 @@ $ DonPAPI
 
 
          ,
-       ,
+       ,                                                 LeHack Release! 💀
         (
-       .
-                                &&&&&&                   LeHack Release! 💀
+       .                                          by Touf & Zblurx @ Login Sécurité
+                                &&&&&&
      &&&&&%%%.                  &&&&&&
       &&&&%%%              &&&& &&&&&&       &&&&&&            &&&&&.
       &&&&%%%           &&&&&&& &&&&&&    &&&&&&&&&&&&&     &&&&&&&&&&&
