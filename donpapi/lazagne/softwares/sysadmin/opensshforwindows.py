@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from donpapi.lazagne.config.module_info import ModuleInfo
 from donpapi.lazagne.config.constant import constant
-# from Crypto.PublicKey import RSA
-# from Crypto.PublicKey import DSA
+# from Cryptodome.PublicKey import RSA
+# from Cryptodome.PublicKey import DSA
 import os
 
 

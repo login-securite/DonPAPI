@@ -1673,8 +1673,6 @@ class MySeatBelt:
 										f"[{self.options.target_ip}] Found Directory %s -> doing nothing" % longname)
 								else:
 									self.logging.debug(f"[{self.options.target_ip}] Found file %s" % longname)
-									if "CREDHIST" in longname:
-										self.download_credhist(user, tmp_pwd, longname, type='USER')
 						except Exception as ex:
 							self.logging.debug(
 								f"[{self.options.target_ip}] {bcolors.WARNING}Exception in get_masterkeys for {longname}{bcolors.ENDC}")
@@ -1736,8 +1734,6 @@ class MySeatBelt:
 						self.logging.debug("Found (not SID) Directory %s" % longname)
 					else:
 						self.logging.debug("Found file %s" % longname)
-						if "CREDHIST" in longname:
-							self.download_credhist(user, tmp_pwd, longname, type='MACHINE')
 
 		except Exception as ex:
 			self.logging.error(
@@ -1745,32 +1741,6 @@ class MySeatBelt:
 			self.logging.debug(ex)
 		self.logging.debug(
 			f"[{self.options.target_ip}] {bcolors.OKBLUE}[-] Gathered Masterkeys for {len(self.users)} users{bcolors.ENDC}")
-
-	def download_credhist(self, user, tmp_pwd, longname, type='MACHINE'):
-		# Downloading file
-		try:
-
-			self.logging.debug(
-				f"[{self.options.target_ip}] [...] Downloading CREDHIST {user.username} {tmp_pwd} {longname}")
-			# from DonPAPI.lib.dpapi_pick.credhist import CredHistFile
-			# localfile = self.myfileops.get_file(ntpath.join(tmp_pwd, longname))
-			'''f=open(localfile,'rb')
-			credhistdata = f.read()
-			f.close()
-			myCredhistfile = CredHistFile(raw=credhistdata)
-
-			print(repr(myCredhistfile))
-			#myCredhistfile = CredHistFile(raw=credhistdata)
-			for username in self.options.credz:
-				if username in user.username:  # pour fonctionner aussi avec le .domain ou les sessions multiple citrix en user.domain.001 ?
-					self.logging.debug(f"[{self.options.target_ip}] [...] Testing {len(self.options.credz[username])} credz for user {user.username} CREDHIST")
-					for password in self.options.credz[username]:
-						ret=myCredhistfile.decryptWithPassword(password)
-						print(ret)
-			'''
-		except Exception as ex:
-			self.logging.error(f"[{self.options.target_ip}] {bcolors.FAIL}Error in Decrypting Credhist{bcolors.ENDC}")
-			self.logging.debug(ex)
 
 	def download_masterkey(self, user, path, guid, type):
 		guid = guid.lower()
@@ -2082,6 +2052,7 @@ class MySeatBelt:
 			self.__LSASecrets.dumpCachedHashes()
 			self.logging.debug("dump cached hashes")
 			self.__LSASecrets.dumpSecrets()
+			self.__LSASecrets.finish()
 
 			filedest = os.path.join(os.path.join(self.options.output_directory, self.options.target_ip), 'LSA')
 			Path(os.path.split(filedest.replace('\\', '/'))[0]).mkdir(parents=True, exist_ok=True)
@@ -2220,18 +2191,18 @@ class MySeatBelt:
 		myRecentFiles.run()
 
 	def GetMRemoteNG(self):
-		from software.manager.mRemoteNG import mRemoteNG
+		from donpapi.software.manager.mRemoteNG import mRemoteNG
 		myMRemoteNG = mRemoteNG(self.smb, self.myregops, self.myfileops, self.logging, self.options, self.db,
 								self.users)
 		myMRemoteNG.run()
 
 	def GetPutty(self):
-		from software.sysadmin.putty import Putty
+		from donpapi.software.sysadmin.putty import Putty
 		myPutty = Putty(self.smb, self.myregops, self.myfileops, self.logging, self.options, self.db)
 		myPutty.run()
 
 	def GetWinscp(self):
-		from software.sysadmin.winscp import Winscp
+		from donpapi.software.sysadmin.winscp import Winscp
 		myWinscp = Winscp(self.smb, self.myregops, self.myfileops, self.logging, self.options, self.db)
 		myWinscp.run()
 

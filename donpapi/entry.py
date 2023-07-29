@@ -38,7 +38,7 @@ BANNER = """
          ,                                                                      
        ,                                                 LeHack Release! \U0001F480                       
         (                                                                       
-       .                                          by Touf & Zblurx @ Login-Securite                       
+       .                                          by Touf & Zblurx @ Login Sécurité                       
                                 &&&&&&                                                             
      &&&&&%%%.                  &&&&&&                                          
       &&&&%%%              &&&& &&&&&&       &&&&&&            &&&&&.           

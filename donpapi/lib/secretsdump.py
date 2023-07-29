@@ -297,7 +297,7 @@ class RemoteFile:
     def __init__(self, smbConnection, fileName):
         self.__smbConnection = smbConnection
         self.__fileName = fileName
-        self.__tid = self.__smbConnection.connectTree('ADMIN$')
+        self.__tid = self.__smbConnection.connectTree('C$')
         self.__fid = None
         self.__currentOffset = 0
 
@@ -335,7 +335,7 @@ class RemoteFile:
     def close(self):
         if self.__fid is not None:
             self.__smbConnection.closeFile(self.__tid, self.__fid)
-            self.__smbConnection.deleteFile('ADMIN$', self.__fileName)
+            self.__smbConnection.deleteFile('C$$', self.__fileName)
             self.__fid = None
 
     def tell(self):

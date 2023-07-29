@@ -27,12 +27,9 @@ DonPAPI = 'donpapi.entry:main'
 [tool.poetry.dependencies]
 python = "^3.9"
 impacket = "^0.9.23"
-pyasn = "^1.6.1"
+pyasn1 = "^0.4.8"
 LnkParse3 = "^1.2.0"
-wheel = "^0.37.0"
-M2Crypto = "^0.38.0"
-pycryptodome = "^3.11.0"
-swig = "^4.1.1"
+cryptography = "^40.0.1"
 
 [tool.poetry.dev-dependencies]
 
