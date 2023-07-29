@@ -27,7 +27,7 @@ from donpapi.software.sysadmin.vnc import Vnc
 from donpapi.lib.toolbox import is_guid
 from donpapi.myusers import *
 from donpapi.lib.fileops import MyRegOps
-from donpapi.database import database
+from donpapi.database import Database
 from donpapi.lib.new_module import *
 from donpapi.lib.RecentFiles import *
 from donpapi.lib.adconnect import *
@@ -86,7 +86,7 @@ class MySeatBelt:
 
 	def init_connect(self):
 		try:
-			self.db = database(sqlite3.connect(self.options.db_path, check_same_thread=False), self.logging)
+			self.db = Database(sqlite3.connect(self.options.db_path, check_same_thread=False), self.logging)
 			if self.create_conn_obj():
 				# self.do_info_rpc_unauth()
 				self.do_info_unauth()
