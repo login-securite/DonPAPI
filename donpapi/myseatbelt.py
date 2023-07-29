@@ -2190,18 +2190,18 @@ class MySeatBelt:
 		myRecentFiles.run()
 
 	def GetMRemoteNG(self):
-		from software.manager.mRemoteNG import mRemoteNG
+		from donpapi.software.manager.mRemoteNG import mRemoteNG
 		myMRemoteNG = mRemoteNG(self.smb, self.myregops, self.myfileops, self.logging, self.options, self.db,
 								self.users)
 		myMRemoteNG.run()
 
 	def GetPutty(self):
-		from software.sysadmin.putty import Putty
+		from donpapi.software.sysadmin.putty import Putty
 		myPutty = Putty(self.smb, self.myregops, self.myfileops, self.logging, self.options, self.db)
 		myPutty.run()
 
 	def GetWinscp(self):
-		from software.sysadmin.winscp import Winscp
+		from donpapi.software.sysadmin.winscp import Winscp
 		myWinscp = Winscp(self.smb, self.myregops, self.myfileops, self.logging, self.options, self.db)
 		myWinscp.run()
 
