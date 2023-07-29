@@ -9,7 +9,7 @@ import string
 import tempfile
 import traceback
 
-from Crypto.Cipher import AES
+from Cryptodome.Cipher import AES
 
 from donpapi.lazagne.config.constant import constant
 from donpapi.lazagne.config.module_info import ModuleInfo
