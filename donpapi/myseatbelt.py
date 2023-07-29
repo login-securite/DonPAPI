@@ -2052,6 +2052,7 @@ class MySeatBelt:
 			self.__LSASecrets.dumpCachedHashes()
 			self.logging.debug("dump cached hashes")
 			self.__LSASecrets.dumpSecrets()
+			self.__LSASecrets.finish()
 
 			filedest = os.path.join(os.path.join(self.options.output_directory, self.options.target_ip), 'LSA')
 			Path(os.path.split(filedest.replace('\\', '/'))[0]).mkdir(parents=True, exist_ok=True)
