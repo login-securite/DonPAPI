@@ -14,7 +14,7 @@ from pathlib import Path
 from ldap3 import ALL, Server, Connection, NTLM
 
 from impacket.dcerpc.v5 import srvs
-from impacket.dcerpc.v5.dtypes import NULL
+from impacket.dcerpc.v5.dtypes import NULL, RPC_SID
 from impacket.smb import SMB_DIALECT
 # import impacket.dpapi
 
@@ -33,7 +33,7 @@ from donpapi.software.browser.firefox_decrypt import *
 from donpapi.software.sysadmin.vnc import Vnc
 
 from donpapi.myusers import MyUser
-from donpapi.database import database
+from donpapi.database import Database
 
 # from DonPAPI.lib.lazagne_dpapi.credhist import CredHistFile
 
@@ -98,7 +98,7 @@ class MySeatBelt:
         """Init SQLite connection."""
         try:
             sqlite_database = sqlite3.connect(self.options.db_path, check_same_thread=False)
-            self.db = database(sqlite_database, self.logging)
+            self.db = Database(sqlite_database, self.logging)
             if self.create_conn_obj():
                 # self.do_info_rpc_unauth()
                 self.do_info_unauth()
@@ -1342,7 +1342,7 @@ class MySeatBelt:
                 for entry in decrypted_blob.attributes:
                     try:
                         info += f"KeyWord : {entry['KeyWord'].decode('utf-16le')}\n"
-                        info += f"Flags   : {entry['Flags']}, {impacket.dpapi.getFlags(CREDENTIAL_FLAGS, entry['Flags'])}\n"
+                        info += f"Flags   : {entry['Flags']}, {impacket.dpapi.getFlags(impacket.dpapi.CREDENTIAL_FLAGS, entry['Flags'])}\n"
                         info += f"Data    : {entry['Data']}\n"
                     except Exception as ex:
                         self.logging.debug(
