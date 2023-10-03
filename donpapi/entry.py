@@ -265,26 +265,26 @@ def first_run(options):
         conn.close()
 
 def seatbelt_thread(datas):
-    global assets
-    target,options, logger=datas
-    logging.debug("[*] SeatBelt thread for {ip} Started".format(ip=target))
+	global assets
+	target,options, logger=datas
+	logging.debug("[*] SeatBelt thread for {ip} Started".format(ip=target))
 
-    try:
-        mysb = MySeatBelt(target,options,logger)
-        if mysb.admin_privs:
-            mysb.do_test()
-            # mysb.run()
-            #mysb.quit()
-        else:
-            logging.debug("[*] No ADMIN account on target {ip}".format(ip=target))
+	try:
+		mysb = MySeatBelt(target,options,logger)
+		if mysb.admin_privs:
+			mysb.do_test()
+			# mysb.run()
+			#mysb.close_smb()
+		else:
+			logging.debug("[*] No ADMIN account on target {ip}".format(ip=target))
 
-        #assets[target] = mysb.get_secrets()
-        logging.debug("[*] SeatBelt thread for {ip} Ended".format(ip=target))
-    except Exception as e:
-        if logging.getLogger().level == logging.DEBUG:
-            import traceback
-            traceback.print_exc()
-        logging.error(str(e))
+		#assets[target] = mysb.get_secrets()
+		logging.debug("[*] SeatBelt thread for {ip} Ended".format(ip=target))
+	except Exception as e:
+		if logging.getLogger().level == logging.DEBUG:
+			import traceback
+			traceback.print_exc()
+		logging.error(str(e))
 
 
 def export_results_seatbelt(output_dir=''):
