@@ -165,12 +165,12 @@ class MySeatBelt:
         """Close SMB connection."""
         try:
             self.logging.debug(f"[{self.options.target_ip}] [-] Closing SMB connection ...")
-            # self.myfileops.close()
-            # self.myregops.close()
-            # self.smb.close()
+            self.myfileops.smb.close()
+            self.myregops.close()
+            self.smb.close()
             self.logging.debug(f"[{self.options.target_ip}] [-] SMB closed ...")
-        except Exception:
-            self.logging.debug('Error in closing SMB connection')
+        except Exception as e:
+            self.logging.debug('Error in closing SMB connection %s',e)
             return False
 
     def get_laps(self):
@@ -2109,13 +2109,13 @@ class MySeatBelt:
             self.__LSASecrets.dumpCachedHashes()
             self.logging.debug("dump cached hashes")
             self.__LSASecrets.dumpSecrets()
-
             filedest_lsa = os.path.join(filedest, 'LSA')
             Path(os.path.split(filedest_lsa.replace('\\', '/'))[0]).mkdir(parents=True, exist_ok=True)
             self.logging.debug(f"[{self.options.target_ip}] Dumping LSA Secrets to file {filedest_lsa}")
             finalfile = self.__LSASecrets.exportSecrets(filedest_lsa)
             self.logging.debug("ret file %s" % finalfile)
             self.__LSASecrets.exportCached(filedest_lsa)
+            self.__LSASecrets.finish()
         # Analyser les hash DCC2 pour un export massif.
         except Exception as ex:
             self.logging.debug(
@@ -2207,6 +2207,7 @@ class MySeatBelt:
             self.__SAMHashes.dump()
             filedest_sam = os.path.join(filedest, 'SAM')
             self.__SAMHashes.export(filedest_sam)
+            self.__SAMHashes.finish()
             # Adding SAM hash to credz
             tmp_filedest = filedest_sam + '.sam'
             f = open(tmp_filedest, 'rb')
@@ -2239,7 +2240,7 @@ class MySeatBelt:
             self.logging.debug(
                 f"[{self.options.target_ip}] Except remoteOps SAM")
             self.logging.debug(ex)
-        self.__remoteOps.finish()
+            self.__remoteOps.finish()
         return 1
 
     def GetRecentFiles(self):
@@ -2248,18 +2249,18 @@ class MySeatBelt:
         myRecentFiles.run()
 
     def GetMRemoteNG(self):
-        from software.manager.mRemoteNG import mRemoteNG
+        from donpapi.software.manager.mRemoteNG import mRemoteNG
         myMRemoteNG = mRemoteNG(self.smb, self.myregops, self.myfileops, self.logging, self.options, self.db,
                                 self.users)
         myMRemoteNG.run()
 
     def GetPutty(self):
-        from software.sysadmin.putty import Putty
+        from donpapi.software.sysadmin.putty import Putty
         myPutty = Putty(self.smb, self.myregops, self.myfileops, self.logging, self.options, self.db)
         myPutty.run()
 
     def GetWinscp(self):
-        from software.sysadmin.winscp import Winscp
+        from donpapi.software.sysadmin.winscp import Winscp
         myWinscp = Winscp(self.smb, self.myregops, self.myfileops, self.logging, self.options, self.db)
         myWinscp.run()
 

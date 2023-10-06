@@ -156,7 +156,8 @@ class RegHandler:
 
     def close(self):
         if self.__remoteOps is not None:
-            self.__remoteOps.finish()
+            # self.__remoteOps.finish()
+            pass
         if self.__smbConnection is not None:
             self.__smbConnection.close()
 

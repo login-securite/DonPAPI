@@ -9,7 +9,7 @@ try:
 except ImportError:
     import winreg
 
-from software.sysadmin import d3des as d
+from donpapi.software.sysadmin import d3des as d
 from donpapi.lazagne.config.winstructure import *
 from donpapi.lazagne.config.module_info import ModuleInfo
 
