@@ -23,6 +23,8 @@ packages = [
 
 [tool.poetry.scripts]
 DonPAPI = 'donpapi.entry:main'
+donpapi = 'donpapi.entry:main'
+dpp = 'donpapi.entry:main'
 
 [tool.poetry.dependencies]
 python = "^3.9"
