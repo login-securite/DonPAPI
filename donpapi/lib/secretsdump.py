@@ -297,7 +297,8 @@ class RemoteFile:
     def __init__(self, smbConnection, fileName):
         self.__smbConnection = smbConnection
         self.__fileName = fileName
-        self.__tid = self.__smbConnection.connectTree('C$')
+        self.__share = 'C$'
+        self.__tid = self.__smbConnection.connectTree(self.__share)
         self.__fid = None
         self.__currentOffset = 0
 
@@ -335,14 +336,14 @@ class RemoteFile:
     def close(self):
         if self.__fid is not None:
             self.__smbConnection.closeFile(self.__tid, self.__fid)
-            self.__smbConnection.deleteFile('C$$', self.__fileName)
+            self.__smbConnection.deleteFile('C$', self.__fileName)
             self.__fid = None
 
     def tell(self):
         return self.__currentOffset
 
     def __str__(self):
-        return "\\\\%s\\ADMIN$\\%s" % (self.__smbConnection.getRemoteHost(), self.__fileName)
+        return "\\\\%s\\%s\\%s" % (self.__smbConnection.getRemoteHost(), self.__share, self.__fileName)
 
 class RemoteOperations:
     def __init__(self, smbConnection, doKerberos, kdcHost=None):
@@ -1461,7 +1462,7 @@ class LSASecrets(OfflineRegistry):
         upperName = name.upper()
 
         LOG.info('%s ' % name)
-
+        
         secret = ''
 
         if upperName.startswith('_SC_'):
