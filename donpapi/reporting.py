@@ -273,6 +273,8 @@ class Reporting:
                 try:
                     hex_passw = ''
                     hex_passw = binascii.unhexlify(password).replace(b'>', b'')
+                except ValueError:
+                    hex_passw = password
                 except binascii.Error:
                     hex_passw = password
 
@@ -414,7 +416,7 @@ class Reporting:
                             if (type_cred == "browser-chrome" and (expires_utc != 0) and
                                 utc_time < datetime.today()) or \
                                (type_cred != "browser-chrome" and
-                               datetime.fromtimestamp(expires_utc) < datetime.today()):
+                               self.datetime_to_time(expires_utc) < datetime.today().strftime('%b %d %Y %H:%M:%S')):
                                 log_debug = f" Skipping old cookie  {bcolors.WARNING}  {name} "
                                 log_debug += f"{value} {type_cred} {target} {expires_utc} "
                                 log_debug += f"{bcolors.ENDC}"
@@ -483,8 +485,7 @@ class Reporting:
                                         data += f"""<td {special_style} ><a title="{info}">"""
                                         data += f"""{data_time} </a></td>"""
                                     else:
-                                        date_time = datetime.fromtimestamp(info)
-                                        date_time = date_time.strftime('%b %d %Y %H:%M:%S')
+                                        date_time = self.datetime_to_time(info)
                                         data += f"""<td {special_style} ><a title="{info}"> """
                                         data += f"""{date_time} </a></td>"""
                                 except OSError:
@@ -673,6 +674,9 @@ class Reporting:
         # finalise result page
         data = "</body></html>"
         self.add_to_resultpage(data)
+
+    def datetime_to_time(self,timestamp_utc) -> str:
+        return (datetime(1601, 1, 1) + timedelta(microseconds=timestamp_utc)).strftime('%b %d %Y %H:%M:%S')
 
     def get_dpapi_hashes(self):
         """Get DPAPI hashes from database."""

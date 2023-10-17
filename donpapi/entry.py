@@ -233,6 +233,9 @@ def main():
                 my_report.export_mkf_hashes()
                 my_report.export_dcc2_hashes()
         except Exception as e:
+            if logging.getLogger().level == logging.DEBUG:
+                import traceback
+                traceback.print_exc()
             logging.error(str(e))
 
 def load_configs(options):
