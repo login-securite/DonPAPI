@@ -36,7 +36,7 @@ assets={}
 BANNER = """
                                                                                 
          ,                                                                      
-       ,                                                 LeHack Release! \U0001F480                       
+       ,                                 V1.2.0 - Refresh Token Edition \U0001F480                       
         (                                                                       
        .                                          by Touf & Zblurx @ Login Sécurité                       
                                 &&&&&&                                                             
