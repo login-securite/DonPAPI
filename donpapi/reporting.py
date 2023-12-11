@@ -51,7 +51,7 @@ class Reporting:
 
         # Set default options content if not specified
         if report_content is None:
-            report_content = ['credz', 'certificates', 'cookies', 'files',
+            report_content = ['credz', 'token','certificates', 'cookies', 'files',
                               'connected_user', 'hash_reuse', 'audited_scope',
                               'masterkeys']
 
@@ -84,7 +84,7 @@ class Reporting:
             self.logging.debug(error)
             return False
 
-        try:
+        '''try:
             if not os.path.exists(self.html_path):
                 os.mkdir(self.html_path)
         except OSError as ex:
@@ -92,6 +92,7 @@ class Reporting:
             self.logging.debug(error)
             self.logging.debug(ex)
             return False
+        '''
 
         data = f"""<!DOCTYPE html>
             <html>
@@ -112,7 +113,7 @@ class Reporting:
         data += """<a class="firstletter">M</a><a>enu</a></th></tr>\n"""
         data = """<div class="navbar">\n"""
         for menu in ['wifi', 'taskscheduler', 'credential-blob', 'certificates',
-                     'browser-internet_explorer', 'cookies', 'SAM', 'LSA', 'DCC2',
+                     'browser-internet_explorer', 'cookies', 'SAM', 'LSA', 'DCC2','token',
                      'Files', 'Connected-users', 'Local_account_reuse', 'Scope_Audited']:
             data += f"""<a href="#{menu}"> {menu.upper()}</a>\n"""
         data += """</DIV><br>\n"""
@@ -163,11 +164,15 @@ class Reporting:
         toggle_it("browser-internet_explorer");
         toggle_it("browser-firefox");
         toggle_it("browser-chrome");
+        toggle_it("browser-edge");
+        toggle_it("google_refresh_token");
         toggle_it("SAM");
         toggle_it("LSA");
         toggle_it("DCC2");
         toggle_it("VNC");
         toggle_it("MRemoteNG");
+        toggle_it("Putty");
+        toggle_it("Winscp");
         }
 
         function CopyToClipboard(data_to_copy) {
@@ -197,6 +202,7 @@ class Reporting:
                 credz_content.append('browser-internet_explorer')
                 credz_content.append('browser-firefox')
                 credz_content.append('browser-chrome')
+                credz_content.append('browser-edge')
             if 'sysadmin' in credz_content:
                 credz_content.append('VNC')
                 credz_content.append('MRemoteNG')
@@ -301,6 +307,104 @@ class Reporting:
                 else:
                     special_ref = f'''title="{target}"'''
                 data += f'<TD {special_style} ><A {special_ref}> {str(target)[:48]} </a></td>'
+
+                for info in [creds_type, computer_info, pillaged_from_userid]:
+                    data += f'<TD {special_style} ><A title="{info}"> {str(info)[:48]} </a></td>'
+                data += """</tr>\n"""
+
+            data += """</table><br>"""
+            self.add_to_resultpage(data)
+        #
+
+        if 'token' in report_content:
+            results = self.get_token()
+            # populate credentials report filtering :
+            token_content=[]
+            token_content.append('google_refresh_token')
+            token_content.append('teams')
+
+
+
+            data = """<table class="statistics"><tr>
+             <th><a class="firstletter">I</a><a>D</a></th>
+             <th><a class="firstletter">T</a><a>oken</a></th>
+             <th><a class="firstletter">T</a><a>arget</a></th>
+             <th><a class="firstletter">T</a><a>ype</a></th>
+             <th><a class="firstletter">P</a><a>illaged_from_computerid</a></th>
+             <th><a class="firstletter">P</a><a>illaged_from_userid</a></th></tr>\n"""
+
+            current_type = ''
+            for index, credentials in enumerate(results):
+                _, file_path, username, password, target, \
+                creds_type, pillaged_from_computerid, pillaged_from_userid = credentials
+
+                # filtering data to be included in the report
+                #if creds_type not in credz_content:
+                #    continue
+
+                # Skip infos of WindowsLive:target=virtualapp/didlogical
+                untreated_targets = ["WindowsLive:target=virtualapp/didlogical", "Adobe App Info",
+                                     "Adobe App Prefetched Info", "Adobe User Info",
+                                     "Adobe User OS Info", "MicrosoftOffice16_Data:ADAL",
+                                     "LegacyGeneric:target=msteams_adalsso/adal_contex"]
+                untreated_users = ["NL$KM_history"]
+
+                if creds_type != current_type:
+                    current_type = creds_type
+                    query = f"""AND username NOT IN ("{'","'.join(untreated_users)}") """
+                    query += f"""AND target NOT IN ("{'","'.join(untreated_targets)}")"""
+                    current_type_count = self.get_token_count(current_type, query)[0][0]
+                    data += f"""<TR id={current_type}><TD colspan="6" class="toggle_menu" """
+                    data += f"""onClick="toggle_it('{current_type}')"><a>{current_type} """
+                    data += f"""({current_type_count})</a></td></tr>"""
+
+                # blacklist_bypass
+                if (len(set(untreated_targets) & set(target)) or
+                        len(set(untreated_users) & set(username))):
+                    continue
+
+                # Get computer infos
+                computer_ip, hostname = list(self.get_computer_infos(pillaged_from_computerid))[0]
+                computer_info = f"{computer_ip} | {hostname}"
+
+                # pillaged_from_userid
+                if pillaged_from_userid is not None:
+                    pillaged_from_userid = list(self.get_user_infos(pillaged_from_userid))[0][0]
+                else:
+                    pillaged_from_userid = str(pillaged_from_userid)  # TODO : ??
+
+                if index % 2 == 0:
+                    data += f"""<TR class=tableau_resultat_row0 {current_type}=1>"""
+                else:
+                    data += f"""<TR class=tableau_resultat_row1 {current_type}=1>"""
+
+                if 'admin' in username.lower():  # Pour mettre des results en valeur
+                    special_style = '''class="cracked"'''
+                else:
+                    special_style = ""
+
+                # Print block
+                # recover username from target
+                # TODO: update myseatbelt.py to make a clean function dump_CREDENTIAL_XXXXX
+
+                if "LegacyGeneric:target=MicrosoftOffice1" in target:
+                    username = target.split(':')[-1]
+
+                #ID
+                data += f'<TD {special_style} ><A title="{username}"> {username[:48]} </a></td>'
+                #Token
+                data += f'<TD {special_style} ><A title="{password}"> {password[:48]} </a></td>'
+
+                # Target
+                if 'google_refresh_token' in creds_type :
+                    to_be_pasted = f"python3 ./donpapi/lib/google_refresh_token.py -t {password}"
+
+                    info2 = f"""<button onclick="CopyToClipboard('{to_be_pasted}')">Copy</button>"""
+                    #special_ref = f'''href="{info2}" target="_blank" title="Get Google Access Token"'''
+                    data += f'<TD {special_style} >{info2} </td>'
+                else:
+                    special_ref = f'''title="{target}"'''
+                    data += f'<TD {special_style} ><A {special_ref}> {str(target)[:48]} </a></td>'
 
                 for info in [creds_type, computer_info, pillaged_from_userid]:
                     data += f'<TD {special_style} ><A title="{info}"> {str(info)[:48]} </a></td>'
@@ -858,6 +962,15 @@ class Reporting:
             results = cur.fetchall()
         return results
 
+    def get_token_count(self, current_type, extra_conditions=''):
+        """Return credentials count for a given type."""
+        with self.conn:
+            cur = self.conn.cursor()
+            cur.execute("SELECT count(id) FROM token "
+                        f"WHERE LOWER(type)=LOWER('{current_type}') {extra_conditions}")
+            results = cur.fetchall()
+        return results
+
     def get_certificates(self, distinct=False):
         """Return certificates from Database"""
         if distinct:
@@ -901,6 +1014,38 @@ class Reporting:
             with self.conn:
                 cur = self.conn.cursor()
                 cur.execute("SELECT * FROM credz ORDER BY type DESC, target ASC ")
+
+        results = cur.fetchall()
+        return results
+
+    def get_token(self, filter_term=None, credz_type=None, distinct=False, distinct_sam=False):
+        """Return credentials from the database."""
+        if credz_type:
+            with self.conn:
+                cur = self.conn.cursor()
+                cur.execute(f"SELECT * FROM token WHERE LOWER(type)=LOWER('{credz_type}')")
+
+        # if we're filtering by username
+        elif filter_term and filter_term != '':
+            with self.conn:
+                cur = self.conn.cursor()
+                cur.execute("SELECT * FROM users WHERE LOWER(username) LIKE LOWER(?)",
+                            [f'%{filter_term}%'])
+        elif distinct:
+            with self.conn:
+                cur = self.conn.cursor()
+                cur.execute("SELECT DISTINCT username,password FROM token WHERE "
+                            "LOWER(type) NOT IN ('sam','lsa','dcc2') AND password NOT IN ('')")
+        elif distinct_sam:
+            with self.conn:
+                cur = self.conn.cursor()
+                cur.execute("SELECT DISTINCT username,password FROM token WHERE "
+                            "LOWER(type) IN ('sam') AND password NOT IN ('')")
+        # otherwise return all credentials
+        else:
+            with self.conn:
+                cur = self.conn.cursor()
+                cur.execute("SELECT * FROM token ORDER BY type DESC, target ASC ")
 
         results = cur.fetchall()
         return results

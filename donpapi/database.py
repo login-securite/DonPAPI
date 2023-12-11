@@ -35,6 +35,30 @@ class Database:
         results = cur.fetchall()
         return results
 
+    def get_token(self, filterTerm=None, credz_type=None):
+        """
+        Return credentials from the database.
+        """
+        if credz_type:
+            with self.conn:
+                cur = self.conn.cursor()
+                cur.execute(f"SELECT * FROM token WHERE type='{credz_type}'")
+
+        # if we're filtering by username
+        elif filterTerm and filterTerm != '':
+            with self.conn:
+                cur = self.conn.cursor()
+                cur.execute("SELECT * FROM users WHERE LOWER(username) LIKE LOWER(?)", ['%{}%'.format(filterTerm)])
+
+        # otherwise return all credentials
+        else:
+            with self.conn:
+                cur = self.conn.cursor()
+                cur.execute("SELECT * FROM token")
+
+        results = cur.fetchall()
+        return results
+
     @staticmethod
     def db_schema(db_conn):
         db_conn.execute('''CREATE TABLE "computers" (
@@ -88,6 +112,19 @@ class Database:
 					FOREIGN KEY(pillaged_from_computerid) REFERENCES computers(id),
 					FOREIGN KEY(pillaged_from_userid) REFERENCES users(id)
 					)''')
+
+        db_conn.execute('''CREATE TABLE "token" (
+        					"id" integer PRIMARY KEY,
+        					"file_path" text,
+        					"username" text,
+        					"password" text,
+        					"target" text,
+        					"type" text,
+        					"pillaged_from_computerid" integer,
+        					"pillaged_from_userid" integer,
+        					FOREIGN KEY(pillaged_from_computerid) REFERENCES computers(id),
+        					FOREIGN KEY(pillaged_from_userid) REFERENCES users(id)
+        					)''')
 
         db_conn.execute('''CREATE TABLE "certificates" (
 					"id" integer PRIMARY KEY,
@@ -788,6 +825,123 @@ class Database:
 
         return None
 
+    def add_token(self, credz_type, credz_username, credz_password, credz_target, credz_path, pillaged_from_computerid=None,
+                pillaged_from_userid=None, pillaged_from_computer_ip=None, pillaged_from_username=None):
+        """
+        Check if this credential has already been added to the database, if not add it in.
+        """
+        user_rowid = None
+        try:
+            credz_username = self.clear_input(credz_username)
+            credz_password = self.clear_input(credz_password)
+            credz_target = self.clear_input(credz_target)
+            credz_path = self.clear_input(credz_path)
+            self.logging.debug(f"{credz_username} - {binascii.hexlify(credz_username.encode('utf-8'))}")
+            self.logging.debug(f"{credz_password} - {binascii.hexlify(credz_password.encode('utf-8'))}")
+            self.logging.debug(f"{credz_target} - {binascii.hexlify(credz_target.encode('utf-8'))}")
+            self.logging.debug(f"{credz_path} - {binascii.hexlify(credz_path.encode('utf-8'))}")
+            self.logging.debug(
+                f"pillaged_from_computer_ip {pillaged_from_computer_ip} - {binascii.hexlify(pillaged_from_computer_ip.encode('utf-8'))}")
+            self.logging.debug(f"pillaged_from_username {pillaged_from_username}")
+
+            if pillaged_from_computer_ip != None:
+                with self.conn:
+                    cur = self.conn.cursor()
+                    cur.execute(f"SELECT * FROM computers WHERE LOWER(ip)=LOWER('{pillaged_from_computer_ip}')")
+                results = cur.fetchall()
+                if len(results) > 0:
+                    result = results[0]
+                    pillaged_from_computerid = result[0]
+                    self.logging.debug(f"[+] Resolved {pillaged_from_computer_ip} to id : {pillaged_from_computerid}")
+        except Exception as ex:
+            self.logging.error(f"Exception in add_token 1")
+            self.logging.debug(ex)
+
+        try:
+            if pillaged_from_username != None:
+                with self.conn:
+                    cur = self.conn.cursor()
+                    cur.execute(
+                        f"SELECT * FROM users WHERE LOWER(username)=LOWER('{pillaged_from_username}') AND pillaged_from_computerid={pillaged_from_computerid}")
+                results = cur.fetchall()
+                if len(results) > 0:
+                    result = results[0]
+                    pillaged_from_userid = result[0]
+                    self.logging.debug(
+                        f"[+] Resolved {pillaged_from_username} on machine {pillaged_from_computerid} to id : {pillaged_from_userid}")
+        except Exception as ex:
+            self.logging.error(f"Exception in add_token 2")
+            self.logging.debug(ex)
+            pass
+        if pillaged_from_computerid == None or pillaged_from_userid == None:
+            self.logging.debug(
+                f"[-] Missing computerId or UserId to register token {credz_username} {credz_password} - {credz_target}")
+        # return None
+        try:
+            if pillaged_from_userid == None:
+                query = "SELECT * FROM token WHERE LOWER(username)=LOWER(:credz_username) AND LOWER(password)=LOWER(:credz_password) AND LOWER(type)=LOWER(:credz_type) AND LOWER(target)=LOWER(:credz_target) AND pillaged_from_computerid=:pillaged_from_computerid"
+                parameters = {
+                    "credz_username": credz_username,
+                    "credz_password": credz_password,
+                    "credz_type": credz_type, "credz_target": credz_target,
+                    "pillaged_from_computerid": int(pillaged_from_computerid),
+                }
+            else:
+                query = "SELECT * FROM token WHERE LOWER(username)=LOWER(:credz_username) AND LOWER(password)=LOWER(:credz_password) AND LOWER(type)=LOWER(:credz_type) AND LOWER(target)=LOWER(:credz_target) AND pillaged_from_computerid=:pillaged_from_computerid AND pillaged_from_userid=:pillaged_from_userid"
+                parameters = {
+                    "credz_username": credz_username,
+                    "credz_password": credz_password,
+                    "credz_type": credz_type, "credz_target": credz_target,
+                    "pillaged_from_computerid": int(pillaged_from_computerid),
+                    "pillaged_from_userid": int(pillaged_from_userid)
+                }
+            self.logging.debug(query)
+            with self.conn:
+                cur = self.conn.cursor()
+                cur.execute(query, parameters)
+            results = cur.fetchall()
+        except Exception as ex:
+            self.logging.error(f"Exception in add_token 3")
+            self.logging.debug(ex)
+        try:
+            if not len(results):
+                if pillaged_from_userid == None:
+                    query = "   INSERT INTO token (username, password, target, type, pillaged_from_computerid, file_path) VALUES (:credz_username, :credz_password, :credz_target, :credz_type, :pillaged_from_computerid, :credz_path)"
+                    parameters = {
+                        "credz_username": credz_username,
+                        "credz_password": credz_password,
+                        "credz_target": credz_target,
+                        "credz_type": credz_type,
+                        "pillaged_from_computerid": int(pillaged_from_computerid),
+                        "credz_path": credz_path,
+                    }
+                else:
+                    query = "INSERT INTO token (username, password, target, type, pillaged_from_computerid,pillaged_from_userid, file_path) VALUES (:credz_username, :credz_password, :credz_target, :credz_type, :pillaged_from_computerid, :pillaged_from_userid, :credz_path)"
+                    parameters = {
+                        "credz_username": credz_username,
+                        "credz_password": credz_password,
+                        "credz_type": credz_type,
+                        "credz_target": credz_target,
+                        "pillaged_from_computerid": int(pillaged_from_computerid),
+                        "pillaged_from_userid": int(pillaged_from_userid),
+                        "credz_path": credz_path,
+                    }
+                self.logging.debug(query)
+                with self.conn:
+                    cur = self.conn.cursor()
+                    cur.execute(query, parameters)
+                user_rowid = cur.lastrowid
+                self.logging.debug(
+                    f'added_token(credtype={credz_type}, target={credz_target}, username={credz_username}, password={credz_password}) => {user_rowid}')
+            else:
+                self.logging.debug(
+                    f'added_token(credtype={credz_type}, target={credz_target}, username={credz_username}, password={credz_password}) => ALREADY IN DB')
+
+        except Exception as ex:
+            self.logging.error(f"Exception in add_token 4")
+            self.logging.debug(ex)
+
+        return None
 
     def add_cookies(self, credz_type, credz_name, credz_value, credz_expires_utc, credz_target, credz_path,
                     pillaged_from_computerid=None, pillaged_from_userid=None, pillaged_from_computer_ip=None,

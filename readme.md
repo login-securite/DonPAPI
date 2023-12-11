@@ -220,10 +220,12 @@ DonPAPI -pvk domain_backupkey.pvk domain/user:passw0rd@domain_network_list
 - AdConnect (still require a manual operation)
 - Wifi key
 - Internet explorer Credentials
-- Chrome cookies & credentials
+- Chrome cookies & credentials (and chrome like : Edge)
 - Firefox cookies & credentials
 - VNC passwords
 - mRemoteNG password (with default config)
+- putty, WinSCP
+- Google Refresh Token 
 
 ### Compliance check
 

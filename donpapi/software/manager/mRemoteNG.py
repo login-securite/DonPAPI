@@ -234,7 +234,7 @@ class mRemoteNG():
             
             <setting name="DefaultUsername">userDomaine</setting>
             <setting name="DefaultDomain">LMyDom</setting>
-            <setting name="DefaultPassword">Ct6gc/JSzjRh/25oz0MCldcITaE=</setting>
+            <setting name="DefaultPassword"></setting>
             '''
         except Exception as ex:
             self.logging.debug(

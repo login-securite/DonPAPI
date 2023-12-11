@@ -89,7 +89,7 @@ def main():
     group.add_argument('-port', choices=['135', '139', '445'], nargs='?', default='445', metavar="destination port", help='Destination port to connect to SMB Server')
 
     group = parser.add_argument_group('Reporting')
-    group.add_argument('-R', '--report', action="store_true", help='Only Generate Report on the scope', default=False)
+    group.add_argument('-R', '--report', action="store_true", help='Only Generate Report on the scope', default=True)
     group.add_argument('--type', action="store", help='only report "type" password (wifi,credential-blob,browser-internet_explorer,LSA,SAM,taskscheduler,VNC,browser-chrome,browser-firefox')
     group.add_argument('-u','--user', action="store_true", help='only this username')
     group.add_argument('--target', action="store_true", help='only this target (url/IP...)')
@@ -216,11 +216,11 @@ def main():
                                       report_content=['credz', 'hash_reuse'],
                                       credz_content=['taskscheduler', 'LSA'])
             my_report.generate_report(report_name='most_important_credentials',
-                                      report_content=['credz'],
+                                      report_content=['credz','token'],
                                       credz_content=['wifi', 'taskscheduler', 'credential-blob',
                                                      'browser', 'sysadmin', 'LSA'])
             my_report.generate_report(report_name='cookies',
-                                      report_content=['cookies'],
+                                      report_content=['cookies','token'],
                                       credz_content=[''])
             # Main report
             my_report.generate_report(report_name='full_report')
@@ -229,6 +229,7 @@ def main():
             my_report.export_credz()
             my_report.export_sam()
             my_report.export_cookies()
+            my_report.export_lsa()
             if options.GetHashes:
                 my_report.export_mkf_hashes()
                 my_report.export_dcc2_hashes()
