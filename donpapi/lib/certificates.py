@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import ntpath,copy
 import os
 from typing import Any, Dict, List, Literal, Tuple
@@ -410,9 +411,11 @@ class CertificatesTriage():
                                     pkey = self.decrypt_privatekey(key=masterkey['key'], privatekey_bytes=data)
                                     pkeys[hashlib.md5(pkey.public_key().export_key('DER')).hexdigest()] = (pkey_guid,pkey)
                             except Exception as e:
-                                import traceback
-                                traceback.print_exc()
-                                self.logging.debug(str(e))
+                                if self.logging.getLogger().level == logging.DEBUG:
+                                    import traceback
+                                    traceback.print_exc()
+                                    self.logging.debug(str(e))
+                                pass
         return pkeys
     
     def loot_certificates(self, certificates_paths: List[str]) -> Dict[str, x509.Certificate]:

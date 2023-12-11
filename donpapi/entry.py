@@ -17,6 +17,7 @@
 #  @Byt3bl3d33r for CME (lots of inspiration and code comes from CME : https://github.com/byt3bl33d3r/CrackMapExec )
 #  All the Team of @LoginSecurite for their help in debugging my shity code (special thanks to @layno & @HackAndDo for that)
 
+import importlib.metadata
 import argparse
 import json
 import logging
@@ -33,10 +34,12 @@ from donpapi.lib.toolbox import split_targets
 global assets
 assets={}
 
-BANNER = """
+VERSION = importlib.metadata.version("donpapi")
+
+BANNER = f"""
                                                                                 
-         ,                                                                      
-       ,                                 V1.2.0 - Refresh Token Edition \U0001F480                       
+         ,                                        version: {VERSION}                              
+       ,                                          Refresh Token Edition \U0001F480                       
         (                                                                       
        .                                          by Touf & Zblurx @ Login Sécurité                       
                                 &&&&&&                                                             

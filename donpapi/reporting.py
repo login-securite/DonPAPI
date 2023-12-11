@@ -432,8 +432,7 @@ class Reporting:
             data += f"""({len(results)})</a></td></tr>"""
             for index, cred in enumerate(results):
                 _, pfx_filepath, guid, issuer, subject, \
-                   client_auth, pillaged_from_computerid, pillaged_from_userid = cred[7]
-
+                   client_auth, pillaged_from_computerid, pillaged_from_userid = cred
                 computer_ip, hostname = list(self.get_computer_infos(pillaged_from_computerid))[0]
                 computer_info = f"{computer_ip} | {hostname}"
                 if pillaged_from_userid is not None:
