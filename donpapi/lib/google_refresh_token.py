@@ -100,6 +100,9 @@ def main():
     client_secret = 'OTJgUOQcT7lO7GsGZq2G4IlT'
     refresh_token = options.token
     access_token = refreshToken2(client_id, client_secret, refresh_token)
+    if not access_token:
+        print("[x] Error, the refresh token seems not valid")
+        sys.exit(1)
     print(f'[+] Access_token: {access_token}\n')
     ubertoken = get_ubertoken(access_token)
     print(f'[+] Click on this link to get a websession for this user: {ubertoken}\n')
