@@ -1,14 +1,14 @@
 [tool.poetry]
 name = "donpapi"
-version = "1.2.0"
+version = "2.0.0"
 description = "Dumping revelant information on compromised targets without AV detection"
 authors = ["Login Securite <contact@login-securite.com>"]
-readme = "readme.md"
+readme = "README.md"
 homepage = "https://github.com/login-securite/DonPAPI"
 repository = "https://github.com/login-securite/DonPAPI"
 license = "'GNU (GPLv3)"
 exclude = []
-include = ["donpapi/config/*", "donpapi/res/*"]
+include = ["donpapi/res/*"]
 classifiers = [
     'Environment :: Console',
     'Programming Language :: Python :: 3',
@@ -17,8 +17,7 @@ classifiers = [
 packages = [
     { include = "donpapi"},
     { include = "donpapi/lib"},
-    { include = "donpapi/software"},
-    { include = "donpapi/lazagne"},
+    { include = "donpapi/collectors"},
 ]
 
 [tool.poetry.scripts]
@@ -28,11 +27,18 @@ dpp = 'donpapi.entry:main'
 
 [tool.poetry.dependencies]
 python = "^3.9"
-impacket = "^0.9.23"
-pyasn1 = "^0.4.8"
-LnkParse3 = "^1.2.0"
-cryptography = "^40.0.1"
-pyjwt = "^2.8.0"
+impacket = "^0.11.0"
+dploot = "^2.7.1"
+rich = "^13.7.0"
+sqlalchemy = "^2.0.25"
+termcolor = "^2.4.0"
+exrex = "^0.11.0"
+jinja2 = "^3.1.4"
+flask = "^3.0.3"
+marshmallow-sqlalchemy = "^1.0.0"
+flask-rich = "^0.4.1"
+flask-basicauth = "^0.2.0"
+flask-cors = "^4.0.1"
 
 [tool.poetry.dev-dependencies]
 

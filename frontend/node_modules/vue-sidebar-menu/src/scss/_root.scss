@@ -1,0 +1,82 @@
+.v-sidebar-menu {
+  --vsm-primary-color: #{$primary-color};
+  --vsm-base-bg: #{$base-bg};
+
+  --vsm-item-color: #{$item-color};
+
+  @if $item-active-color != null {
+    --vsm-item-active-color: #{$item-active-color};
+  }
+  @if $item-active-bg != null {
+    --vsm-item-active-bg: #{$item-active-bg};
+  }
+
+  @if $item-active-line-color != $primary-color {
+    --vsm-item-active-line-color: #{$item-active-line-color};
+  } @else {
+    --vsm-item-active-line-color: var(--vsm-primary-color);
+  }
+
+  --vsm-item-open-color: #{$item-open-color};
+
+  @if $item-open-bg != $primary-color {
+    --vsm-item-open-bg: #{$item-open-bg};
+  } @else {
+    --vsm-item-open-bg: var(--vsm-primary-color);
+  }
+
+  @if $item-hover-color != null {
+    --vsm-item-hover-color: #{$item-hover-color};
+  }
+  --vsm-item-hover-bg: #{$item-hover-bg};
+
+  @if $icon-color != $item-color {
+    --vsm-icon-color: #{$icon-color};
+  } @else {
+    --vsm-icon-color: var(--vsm-item-color);
+  }
+  --vsm-icon-bg: #{$icon-bg};
+
+  @if $icon-active-color != null {
+    --vsm-icon-active-color: #{$icon-active-color};
+  }
+  @if $icon-active-bg != null {
+    --vsm-icon-active-bg: #{$icon-active-bg};
+  }
+
+  @if $icon-open-color != null {
+    --vsm-icon-open-color: #{$icon-open-color};
+  }
+  @if $icon-open-bg != null {
+    --vsm-icon-open-bg: #{$icon-open-bg};
+  }
+
+  --vsm-mobile-item-color: #{$mobile-item-color};
+  @if $mobile-item-bg != $primary-color {
+    --vsm-mobile-item-bg: #{$mobile-item-bg};
+  } @else {
+    --vsm-mobile-item-bg: var(--vsm-primary-color);
+  }
+  @if $mobile-icon-color != $mobile-item-color {
+    --vsm-mobile-icon-color: #{$mobile-icon-color};
+  } @else {
+    --vsm-mobile-icon-color: var(--vsm-mobile-item-color);
+  }
+  --vsm-mobile-icon-bg: #{$mobile-icon-bg};
+
+  @if $dropdown-color != null {
+    --vsm-dropdown-color: #{$dropdown-color};
+  }
+  --vsm-dropdown-bg: #{$dropdown-bg};
+
+  --vsm-header-item-color: #{$header-item-color};
+
+  --vsm-toggle-btn-color: #{$toggle-btn-color};
+  --vsm-toggle-btn-bg: #{$toggle-btn-bg};
+
+  --vsm-item-font-size: #{$item-font-size};
+  --vsm-item-line-height: #{$item-line-height};
+  --vsm-item-padding: #{$item-padding};
+  --vsm-icon-height: #{$icon-height};
+  --vsm-icon-width: #{$icon-width};
+}

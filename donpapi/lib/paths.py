@@ -1,0 +1,26 @@
+import os
+import donpapi
+
+
+DPP_PATH = os.path.expanduser("~/.donpapi")
+
+DPP_DB_FILE = "donpapi.db"
+DPP_LOOT_DIR_NAME = "loot"
+DPP_REPORT_DIR_NAME = "report"
+DPP_RECOVER_DIR_NAME = "recover"
+DPP_CONFIG_FILE = "donpapi.conf"
+DPP_LOG_FILE = "debug.log"
+DPP_RES_DIR_NAME = "res"
+DPP_REPORT_HTML_FILE = "report.html"
+DPP_REPORT_CSS_FILE = "style.css"
+DPP_REPORT_LOGO_FILE = "logo_lse.png"
+
+DPP_RESOURCES_PATH = os.path.join(os.path.dirname(donpapi.__file__), DPP_RES_DIR_NAME)
+DPP_DB_FILE_PATH = os.path.join(DPP_PATH,DPP_DB_FILE)
+DPP_LOOT_DIR_PATH = os.path.join(DPP_PATH,DPP_LOOT_DIR_NAME)
+DPP_REPORT_DIR_PATH = os.path.join(DPP_PATH,DPP_REPORT_DIR_NAME)
+DPP_CONFIG_FILE_PATH = os.path.join(DPP_PATH,DPP_CONFIG_FILE)
+DPP_LOG_FILE_PATH = os.path.join(DPP_PATH,DPP_LOG_FILE)
+DPP_REPORT_HTML_FILE_PATH = os.path.join(DPP_RESOURCES_PATH, DPP_REPORT_HTML_FILE)
+DPP_REPORT_CSS_FILE_PATH = os.path.join(DPP_RESOURCES_PATH, DPP_REPORT_CSS_FILE)
+DPP_REPORT_LOGO_FILE_PATH = os.path.join(DPP_RESOURCES_PATH, DPP_REPORT_LOGO_FILE)
