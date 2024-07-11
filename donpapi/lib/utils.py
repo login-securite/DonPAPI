@@ -70,7 +70,10 @@ def parse_file_as_dict(filename: str) -> Dict[str,str]:
     return arr
 
 def parse_credentials_files(pvkfile, passwords_file, nthashes_file, masterkeys_file, username, password, nthash):
-    pvkbytes = passwords = nthashes = masterkeys = None
+    pvkbytes = None
+    passwords = {}
+    nthashes = {}
+    masterkeys = []
 
     if pvkfile is not None:
         try:

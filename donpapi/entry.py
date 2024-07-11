@@ -88,25 +88,49 @@ def fetch_all_computers(options):
     donpapi_logger.display(f"Collecting every hostnames from {options.domain}")
     results = None
     hostnames = []
+    ldap_filter = "(objectCategory=computer)"
+    attributes = [
+        "name",
+    ]
+
+    dc_hostname = None
+    base_dn = None
+
     try:
-        base_dn = 'dc='
-        base_dn += ",dc=".join(options.domain.split('.'))
-        ldap_filter = "(objectCategory=computer)"
-        attributes = [
-            "name",
-        ]
         ldap_url = f"ldap://{options.domain}"
-        ldap_connection = ldap.LDAPConnection(ldap_url, base_dn)
+        donpapi_logger.verbose(f"Connecting to {ldap_url} with no baseDN")
+        ldap_connection = ldap.LDAPConnection(ldap_url, dstIp=options.dc_ip)
+        resp = ldap_connection.search(
+            scope=ldapasn1.Scope("baseObject"),
+            attributes=["defaultNamingContext", "dnsHostName"],
+            sizeLimit=0,
+        )
+        for item in resp:
+            if isinstance(item, ldapasn1.SearchResultEntry) is not True:
+                continue
+
+            for attribute in item["attributes"]:
+                if str(attribute["type"]) == "defaultNamingContext":
+                    base_dn = str(attribute["vals"][0])
+                if str(attribute["type"]) == "dnsHostName":
+                    dc_hostname = str(attribute["vals"][0])
+    except Exception as e:
+        donpapi_logger.error(f"Exception while getting ldap info: {e}")
+
+    try:
+        ldap_url = f"ldap://{dc_hostname}"
+        ldap_connection = ldap.LDAPConnection(ldap_url, base_dn, dstIp=options.dc_ip)
         if options.k or options.aesKey:
             # Kerberos connection
             ldap_connection.kerberosLogin(
-                options.username,
-                options.password,
-                options.domain,
-                options.lmhash,
-                options.nthash,
-                options.aesKey,
+                options.username if options.username is not None else "",
+                options.password if options.password is not None else "",
+                options.domain ,
+                options.lmhash if options.lmhash is not None else "",
+                options.nthash if options.nthash is not None else "",
+                options.aesKey if options.aesKey is not None else "",
                 useCache=options.k,
+                kdcHost=options.dc_ip
             )
         else:
             # NTLM connection
@@ -126,7 +150,9 @@ def fetch_all_computers(options):
         donpapi_logger.error(f"Exception while requesting targets: {e}")
         import traceback
         traceback.print_exc()
-
+    if results is None:
+        donpapi_logger.error("Could not get hostnames from LDAP")
+        return []
     results = [r for r in results if isinstance(r, ldapasn1.SearchResultEntry)]
     for computer in results:
         values = {str(attr["type"]).lower(): attr["vals"][0] for attr in computer["attributes"]}
@@ -148,13 +174,13 @@ def fetch_domain_backupkey(options, db: Database):
         try:
             dc_target = Target.create(
                 domain=options.domain,
-                username=options.username,
+                username=options.username if options.username is not None else "",
                 password=options.password,
                 target=options.domain if options.domain != "" else options.dc_ip,
                 lmhash=options.lmhash,
                 nthash=options.nthash,
                 do_kerberos=options.k,
-                no_pass=options.no_pass,
+                no_pass=True,
                 aesKey=options.aesKey,
                 use_kcache=options.aesKey or options.k,
             )
@@ -207,7 +233,7 @@ def main():
     group_authent.add_argument("-r", "--recover-file", metavar="/home/user/.donpapi/recover/recover_1718281433", type=str, help="The recover file path. If used, the other parameters will be ignored")
 
     group_attacks = collect_subparser.add_argument_group('attacks')
-    group_attacks.add_argument('-c','--collectors', action="store", default="All", help= ", ".join(COLLECTORS_LIST.keys())+", All (all previous) (default: All)")
+    group_attacks.add_argument('-c','--collectors', action="store", default="All", help= ", ".join(COLLECTORS_LIST.keys())+", All (all previous) (default: All). Possible to chain multiple collectors comma separated")
     group_attacks.add_argument("-nr","--no-remoteops", action="store_true", help="Disable Remote Ops operations (basically no Remote Registry operations, no DPAPI System Credentials)")
     group_attacks.add_argument("--fetch-pvk", action="store_true", help=("Will automatically use domain backup key from database, and if not already dumped, will dump it on a domain controller"))
     group_attacks.add_argument("--pvkfile", action="store", help=("Pvk file with domain backup key"))
@@ -323,10 +349,11 @@ def main():
             for target in options.target:
                 if target == "ALL":
                     # Target every computers from domain
-                    if hasattr(options, "domain"):
+                    if hasattr(options, "domain") and options.domain != "":
                         targets.extend(fetch_all_computers(options))
                     else:
                         donpapi_logger.error("--domain required with --target ALL")
+                        return
                 else:
                     if os.path.exists(target) and os.path.isfile(target):
                         with open(target) as target_file:
@@ -389,9 +416,10 @@ async def start_dpp(options, db, targets, current_target_recovered, collectors, 
 def create_dpp_thread(options, db, targets, current_target_recovered, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, output_dir, progress_bar, task, executor):
     # Recover file
     progress_bar.update(task, completed=0 if len(current_target_recovered) == 0 else len(targets) - len(current_target_recovered))
+    current_targets = copy.deepcopy(targets)
     if len(current_target_recovered) > 0:
         # finishing targets
-        targets = current_target_recovered
+        current_targets = current_target_recovered
     recover_filename = create_recover_file(targets=targets, dirpath=output_dir, options=options)
     donpapi_logger.display(f"Recover file available at {recover_filename}")
     try:
@@ -399,8 +427,8 @@ def create_dpp_thread(options, db, targets, current_target_recovered, collectors
             future = [executor.submit(core_run,(options, db, target, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, output_dir)) for target in targets]
             for i in as_completed(future):
                 target_finished = i.result()
-                targets.remove(target_finished)
-                update_recover_file(recover_file_handle, targets)
+                current_targets.remove(target_finished)
+                update_recover_file(recover_file_handle, current_targets)
                 progress_bar.update(task, advance=1)
     except KeyboardInterrupt:
             donpapi_logger.error("Caugth Keyboard Interrupt. Gracefully shutdown")

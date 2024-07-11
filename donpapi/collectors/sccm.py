@@ -21,7 +21,7 @@ class SCCMDump:
     def run(self):
         if self.context.remoteops_allowed:
             self.logger.display("Dumping SCCM Credentials")
-            for wmi in [False,True]:
+            for wmi in [True,False]:
                 sccm_triage = SCCMTriage(target=self.target, conn=self.conn, masterkeys=self.masterkeys, use_wmi=wmi)
                 sccmcreds, sccmtasks, sccmcollections = sccm_triage.triage_sccm()
                 for sccmcred in sccmcreds:

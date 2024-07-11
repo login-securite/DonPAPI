@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "donpapi"
-version = "2.0.0"
+version = "2.0.1"
 description = "Dumping revelant information on compromised targets without AV detection"
 authors = ["Login Securite <contact@login-securite.com>"]
 readme = "README.md"
@@ -28,7 +28,7 @@ dpp = 'donpapi.entry:main'
 [tool.poetry.dependencies]
 python = "^3.9"
 impacket = "^0.11.0"
-dploot = "^2.7.1"
+dploot = "^2.7.3"
 rich = "^13.7.0"
 sqlalchemy = "^2.0.25"
 termcolor = "^2.4.0"

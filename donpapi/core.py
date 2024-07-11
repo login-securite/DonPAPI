@@ -42,20 +42,18 @@ class DonPAPICore:
         self.lsa_dump = None
         self.dpapi_systemkey = None
         self.hostname = None
-
         self.dploot_target = Target.create(
             domain=options.domain,
-            username=options.username,
-            password=options.password,
+            username=options.username if options.username is not None else "",
+            password=options.password if options.password is not None else "",
             target=self.host,
-            lmhash=options.lmhash,
-            nthash=options.nthash,
-            do_kerberos=options.k,
-            no_pass=options.no_pass,
+            lmhash=options.lmhash if options.lmhash is not None else "",
+            nthash=options.nthash if options.nthash is not None else "",
+            do_kerberos=options.k or options.aesKey,
+            no_pass=True,
             aesKey=options.aesKey,
-            use_kcache=options.aesKey or options.k,
+            use_kcache=options.k,
         )
-
         self.logger = DonPAPIAdapter()
         if not self.init_connection():
             return
@@ -258,7 +256,7 @@ class DonPAPICore:
                 masterkeys += masterkeys_triage.triage_system_masterkeys() 
         except Exception as e:
             self.logger.debug(f"Could not get masterkeys: {e}")
-        self.masterkeys = masterkeys
+        self.masterkeys += masterkeys
 
     def run(self):
         self.logger.display("Starting gathering credz")
@@ -305,6 +303,7 @@ class DonPAPICore:
                 self.logger.fail(f"Error during {collector.__name__}: {e}")
 
         # Get yadayadayada
+        self.logger.verbose("Finished thread")
 
     @property
     def is_admin(self) -> bool:
