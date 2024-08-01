@@ -34,7 +34,7 @@ class VaultsDump:
                     username=vault.username,
                     password=vault.password,
                     program=vault.type,
-                    target=resource
+                    target=vault.resource,
                     )
         if self.context.remoteops_allowed:
             system_vaults = vaults_triage.triage_system_vaults()
