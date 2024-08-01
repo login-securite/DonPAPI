@@ -22,7 +22,7 @@
 			<div class="logo">
             	<img alt="logo" class="logo" src="@/assets/logo_lse.png"/>
         	</div>
-			<p>Powered by <a target="_blank" href="https://www.login-securite.com">Login Sécurité</a></p>
+			<p>Powered by <a style="color: inherit;" target="_blank" href="https://www.login-securite.com">Login Sécurité</a></p>
 		</div>
     </aside>
 </template>
@@ -78,19 +78,11 @@ aside {
 
 			&:hover {
 				background-color: var(--dark-alt);
-
-				.text {
-					color: var(--primary);
-				}
 			}
 
 			&.router-link-exact-active {
 				background-color: var(--dark-alt);
 				border-right: 5px solid var(--primary);
-
-				.text, .text {
-					color: var(--primary);
-				}
 			}
 		}
 	}
