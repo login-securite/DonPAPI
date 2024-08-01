@@ -1,0 +1,146 @@
+:root {
+	--primary: #c92a2e;
+	--primary-alt: #c92a2fc9;
+	--grey: #64748b;
+	--dark: #1e293b;
+	--dark-alt: #334155;
+	--light: #fff;
+	--sidebar-width: 13rem;
+}
+
+@font-face {
+  font-family: "Poppins";
+  font-style: normal;
+  font-display: auto;
+  font-weight: 400;
+  src: local("Poppins"), url("@/assets/fonts/Poppins/Poppins-Regular.ttf") format("truetype");
+}
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	font-family: "Poppins", "sans-serif";
+}
+
+body {
+  
+	background: var(--light);
+}
+
+button {
+	cursor: pointer;
+	appearance: none;
+	border: none;
+	outline: none;
+	background: none;
+}
+
+.app {
+	display: flex;
+	max-height: 100vh;
+	.container {
+		padding-top: 2rem;
+		display: flex; /*added*/
+		flex-direction: column;
+		
+	}
+	
+	main {
+		flex: 1 1 0;
+		padding: 2rem;
+
+		@media (max-width: 1024px) {
+			padding-left: 6rem;
+		}
+	}
+}
+
+.text_column {
+  min-width:10rem;
+  max-width:10rem;
+}
+
+input[type=text] {
+  border-radius: 5px;
+  border-color: #dbdbdb;
+  color: #363636;
+  text-indent: 10px;
+  margin-top: 5px;
+  width: 80%;
+}
+
+.clipboard-button {
+  width: 4px;
+  border-color: #000;
+}
+
+.buttons {
+  display: flex;
+  height: 10rem;
+  position: relative;
+  padding-top: 1rem;
+  padding-bottom: 2rem;
+
+  .functionalities-buttons {
+    display: flex;
+    height: 2rem;
+    button {
+      color: #fff;
+      background-color: var(--primary);
+    }
+  }
+  
+  .page-selection {
+    position: absolute;
+    right: 0;
+    display: flex;
+    
+    input {
+      margin-left: 1rem;
+      width: 3rem;
+    }
+
+    .page-size-selection {
+      right: 1rem;
+      input {
+        width: 4rem;
+      }
+    }
+  }
+}
+
+.hide-secrets {
+  input {
+    margin-right:0.5rem
+  }
+}
+
+p.description{
+  width: 65rem;
+  position: relative;
+  padding-top: 1rem;
+  padding-bottom: 2rem;
+}
+
+.fullValue {
+  position: relative;
+}
+
+.fullValue div {
+  word-break:break-all;
+  display: block;
+  position: absolute;
+  // block-size: fit-content;
+  width: max-content;
+  max-width: 15em;
+  bottom: 120%;
+  left:0%;
+  z-index:1000;
+  background-color: #DDD;
+  padding: 5px;
+  border-radius: 4px;
+}
+
+.tableFixHead          { table-layout:fixed; overflow-y: auto; height: fit-content; position: relative;}
+.tableFixHead thead th { position: sticky; top: 0; z-index: 1; background-color: #fff; }

@@ -72,9 +72,9 @@
         <tbody>
           <tr v-for="(cookie, index) in cookies" :key="index">
             <td><input class="item-checkbox" :id="index" type="checkbox" @click="clickCookiesCheckbox"></td>
-            <td @click="copyItemToClipBoard(cookie.hostname)">{{ cookie.hostname }}</td>
-            <td @click="copyItemToClipBoard(cookie.windows_user)">{{ cookie.windows_user }}</td>
-            <td @click="copyItemToClipBoard(cookie.cookie_name)">
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(cookie.hostname)">{{ cookie.hostname }}</td>
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(cookie.windows_user)">{{ cookie.windows_user }}</td>
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(cookie.cookie_name)">
               <span v-if="cookie.cookie_name != null" class="fullValue" @mouseover="showFullCookieName[index] = true" @mouseleave="showFullCookieName[index] = false">
                 {{ cookie.cookie_name.length > 20 ? cookie.cookie_name.substring(0,20)+".." : cookie.cookie_name }}
                 <div :id="'cookie_name_' + index" v-show="showFullCookieName[index]">
@@ -82,7 +82,7 @@
                 </div>
               </span>
             </td>
-            <td @click="copyItemToClipBoard(cookie.cookie_value)">
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(cookie.cookie_value)">
               <span v-if="cookie.cookie_value != null" class="fullValue" @mouseover="showFullCookieValue[index] = true" @mouseleave="showFullCookieValue[index] = false">
                 {{ cookie.cookie_value.length > 20 ? hideSecretsOnRender(cookie.cookie_value).substring(0,20)+".." : hideSecretsOnRender(cookie.cookie_value) }}
                 <div :id="'cookie_value_' + index" v-show="showFullCookieValue[index]">
@@ -90,7 +90,7 @@
                 </div>
               </span>
             </td>
-            <td @click="copyItemToClipBoard(cookie.url)">{{ cookie.url }}</td>
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(cookie.url)">{{ cookie.url }}</td>
           </tr>
         </tbody>
       </table>
@@ -168,7 +168,7 @@ export default {
           fullTextToClipboard += "document.cookie='" + cookieName.innerText + "=" + cookieValue.innerText + "'\n";
         }
       }
-      copyToClipBoard(this, fullTextToClipboard)
+      copyToClipBoard(this, fullTextToClipboard, "cookies as JavaScript code")
     },
     resetPageInfo() {
       this.page_number = 1;
@@ -185,11 +185,8 @@ export default {
       axios.get(path)
         .then((res) => {
           this.cookies = res.data.cookies;
-          console.log('pouet')
           console.log(res.data.count);
-          console.log('pouet')
           console.log(this.page_size);
-          console.log("waza");
           this.page_max = Math.ceil(res.data.count/this.page_size); 
           this.showFullCookieName[0] = false; //need to init
           this.showFullCookieValue[0] = false; //need to init

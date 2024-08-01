@@ -64,10 +64,10 @@
         <tbody>
           <tr v-for="(certificate, index) in certificates" :key="index">
             <td><input class="item-checkbox" :id="index" type="checkbox" @click="clickCertificatesCheckbox"></td>
-            <td @click="copyItemToClipBoard(certificate.hostname)">{{ certificate.hostname }}</td>
-            <td @click="copyItemToClipBoard(certificate.windows_user)">{{ certificate.windows_user }}</td>
-            <td @click="copyItemToClipBoard(certificate.username)">{{ certificate.username }}</td>
-            <td v-if="certificate.client_auth" style="font-weight: bold;" @click="copyPfxToCertipyCommand(certificate.pfx_file_path)">Yes</td>
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(certificate.hostname)">{{ certificate.hostname }}</td>
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(certificate.windows_user)">{{ certificate.windows_user }}</td>
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(certificate.username)">{{ certificate.username }}</td>
+            <td v-if="certificate.client_auth" style="font-weight: bold; cursor: pointer;" @click="copyPfxToCertipyCommand(certificate.pfx_file_path)">Yes</td>
             <td v-else>No</td>
           </tr>
         </tbody>
@@ -125,7 +125,7 @@ export default {
       downloadBlob(dataToExport, 'certificates_export_' + Date.now()  + '.csv');
     },
     copyPfxToCertipyCommand(pfxFilePath){
-      copyToClipBoard(this, 'certipy auth -pfx \"' + pfxFilePath + '\"');
+      copyToClipBoard(this, 'certipy auth -pfx \"' + pfxFilePath + '\"', "certipy command");
     },
     resetPageInfo() {
       this.page_number = 1;

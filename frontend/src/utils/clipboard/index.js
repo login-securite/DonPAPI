@@ -1,4 +1,4 @@
-export function copyToClipBoard(item, data) {
+export function copyToClipBoard(item, data, message = "data") {
     if ('clipboard' in navigator) {
         console.log(typeof data)
         navigator.clipboard.writeText(data)
@@ -24,7 +24,7 @@ export function copyToClipBoard(item, data) {
     item.$notify({
         title: "DonPAPI",
         type: "success",
-        text: "Copied to clipboard! 🎉",
+        text: "Successfully copied " + message + " to clipboard! 🎉",
     });
 }
 

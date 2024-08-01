@@ -218,6 +218,10 @@ export default {
     border-color: #ddd !important;
   }
 
+  td {
+    cursor: pointer; 
+  }
+
   .buttons {
     height: 5rem;
   }

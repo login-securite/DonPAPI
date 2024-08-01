@@ -85,10 +85,10 @@
         <tbody>
           <tr v-for="(secret, index) in secrets" :key="index">
             <td><input class="item-checkbox" :id="index" type="checkbox" @click="clickSecretsCheckbox"></td>
-            <td @click="copyItemToClipBoard(secret.hostname)">{{ secret.hostname }}</td>
-            <td @click="copyItemToClipBoard(secret.windows_user)">{{ secret.windows_user }}</td>
-            <td @click="copyItemToClipBoard(secret.program)">{{ secret.program }}</td>
-            <td @click="copyItemToClipBoard(secret.target)">
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(secret.hostname)">{{ secret.hostname }}</td>
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(secret.windows_user)">{{ secret.windows_user }}</td>
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(secret.program)">{{ secret.program }}</td>
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(secret.target)">
               <span v-if="secret.target != null" class="fullValue" @mouseover="showFullTarget[index] = true" @mouseleave="showFullTarget[index] = false">
                 {{ secret.target.length > 20 ? secret.target.substring(0,20)+".." : secret.target }}
                 <div :id="'target_' + index" v-show="showFullTarget[index]">
@@ -96,7 +96,7 @@
                 </div>
               </span>
             </td>
-            <td @click="copyItemToClipBoard(secret.username)">
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(secret.username)">
               <span v-if="secret.username != null" class="fullValue" @mouseover="showFullUsername[index] = true" @mouseleave="showFullUsername[index] = false">
                 {{ secret.username.length > 20 ? secret.username.substring(0,20)+".." : secret.username }}
                 <div :id="'username_' + index" v-show="showFullUsername[index]">
@@ -104,7 +104,7 @@
                 </div>
               </span>
             </td>
-            <td @click="copyItemToClipBoard(secret.password)">
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(secret.password)">
               <span v-if="secret.password != null" class="fullValue" @mouseover="showFullPassword[index] = true" @mouseleave="showFullPassword[index] = false">
                 {{ secret.password.length > 20 ? hideSecretsOnRender(secret.password).substring(0,20)+".." : hideSecretsOnRender(secret.password) }}
                 <div :id="'password_' + index" v-show="showFullPassword[index]">
