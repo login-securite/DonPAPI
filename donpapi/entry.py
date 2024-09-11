@@ -141,10 +141,13 @@ def fetch_all_computers(options):
                 options.lmhash,
                 options.nthash,
             )
+
+        paged_search_control = ldapasn1.SimplePagedResultsControl(criticality=True, size=1000)
+
         results = ldap_connection.search(
             searchFilter=ldap_filter,
             attributes=attributes,
-            sizeLimit=0,
+            searchControls=[paged_search_control],
         )  
     except Exception as e:
         donpapi_logger.error(f"Exception while requesting targets: {e}")
