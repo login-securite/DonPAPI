@@ -40,6 +40,7 @@ from donpapi.collectors.recent_files import FilesDump, TAG as FilesTag
 from donpapi.collectors.sccm import SCCMDump, TAG as SCCMTag
 from donpapi.collectors.mremoteng import MRemoteNgDump, TAG as MRemoteNgTag
 from donpapi.collectors.vnc import VNCDump, TAG as VNCTag
+from donpapi.collectors.powershellhistory import PowerShellHistoryDump, TAG as PowerShellHistoryTag
 from donpapi.lib.config import DonPAPIConfig, parse_config_file
 from donpapi.lib.database import Database, create_db_engine
 from donpapi.lib.paths import DPP_DB_FILE, DPP_LOG_FILE, DPP_PATH
@@ -62,6 +63,7 @@ COLLECTORS_LIST = {
     VaultsTag: VaultsDump,
     VNCTag: VNCDump,
     WifiTag: WifiDump,
+    PowerShellHistoryTag: PowerShellHistoryDump
 }
 
 def set_main_logger(logger , host = "\U0001F480"):
