@@ -49,6 +49,8 @@ class FirefoxDump:
         "Default",
         "Default User",
         "All Users",
+        ".NET v4.5", 
+        ".NET v4.5 Classic"
     )
 
     def __init__(self, target: Target, conn: DPLootSMBConnection, masterkeys: list, options: Any, logger: DonPAPIAdapter, context: DonPAPICore) -> None:
