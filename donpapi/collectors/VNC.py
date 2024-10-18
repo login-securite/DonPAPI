@@ -11,19 +11,20 @@ from Cryptodome.Cipher import DES
 import codecs
 
 
-TAG = "VNC"
-
-class VNCDump:
+class VNC:
     vnc_decryption_key = b"\x17\x52\x6b\x06\x23\x4e\x58\x07"
     ultravnc_decryption_key = b'\xe8\x4a\xd6\x60\xc4\x72\x1a\xe0'
 
-    def __init__(self, target: Target, conn: DPLootSMBConnection, masterkeys: list, options: Any, logger: DonPAPIAdapter, context: DonPAPICore) -> None:
+    def __init__(self, target: Target, conn: DPLootSMBConnection, masterkeys: list, options: Any, logger: DonPAPIAdapter, context: DonPAPICore, false_positive: list, max_filesize: int) -> None:
+        self.tag = self.__class__.__name__
         self.target = target
         self.conn = conn
         self.masterkeys = masterkeys
         self.options = options
         self.logger = logger
         self.context = context
+        self.false_positive = false_positive
+        self.max_filesize = max_filesize
 
     def run(self):
         self.logger.display("Dumping VNC Credentials")
@@ -50,7 +51,7 @@ class VNCDump:
                 continue
             value = value[-1].rstrip(b"\x00")
             password = self.recover_vncpassword(value)
-            self.logger.secret(f"[{vnc_name}] Password: {password.decode('latin-1')}",TAG.upper())
+            self.logger.secret(f"[{vnc_name}] Password: {password.decode('latin-1')}",self.tag.upper())
             self.add_to_db(password.decode('latin-1'), vnc_type=vnc_name)
 
     def split_len(self, seq, length):
@@ -111,8 +112,8 @@ class VNCDump:
                     for passwd_encrypted in passwds_encrypted:
                         passwd_encrypted = passwd_encrypted.split(b'=')[-1]
                         password = self.decrypt_password(unhexlify(passwd_encrypted))
-                        self.logger.secret(f"[{vnc_name}] Password: {password.decode('latin-1')}",TAG.upper())
+                        self.logger.secret(f"[{vnc_name}] Password: {password.decode('latin-1')}",self.tag.upper())
                         self.add_to_db(password.decode('latin-1'), vnc_type=vnc_name)
 
     def add_to_db(self, password, vnc_type):
-        self.context.db.add_secret(computer=self.context.host, collector=TAG, program=vnc_type, password=password, windows_user="SYSTEM")
+        self.context.db.add_secret(computer=self.context.host, collector=self.tag, program=vnc_type, password=password, windows_user="SYSTEM")
