@@ -7,7 +7,7 @@ from donpapi.core import DonPAPICore
 from donpapi.lib.logger import DonPAPIAdapter
 
 
-class CredMan:
+class CredManager:
     def __init__(self, target: Target, conn: DPLootSMBConnection, masterkeys: list, options: Any, logger: DonPAPIAdapter, context: DonPAPICore, false_positive: list, max_filesize: int) -> None:
         self.tag = self.__class__.__name__
         self.target = target
