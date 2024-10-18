@@ -48,7 +48,7 @@ class NotepadPPDump:
                             file_content = b""
                         f.write(file_content)
                     
-                    # Stores files in loot\PowerShellHistory
+                    # Stores files in loot\NotepadPP
                     os.makedirs(f"{self.context.output_dir}/../NotepadPP", exist_ok=True)
                     local_filepath = os.path.join(
                         f"{self.context.output_dir}/../NotepadPP", 
