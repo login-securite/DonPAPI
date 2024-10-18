@@ -39,6 +39,7 @@ from donpapi.collectors.vaults import VaultsDump, TAG as VaultsTag
 from donpapi.collectors.recent_files import FilesDump, TAG as FilesTag
 from donpapi.collectors.sccm import SCCMDump, TAG as SCCMTag
 from donpapi.collectors.mremoteng import MRemoteNgDump, TAG as MRemoteNgTag
+from donpapi.collectors.CloudCredentials import CloudCredentialsDump, TAG as CloudCredentialsTag
 from donpapi.collectors.vnc import VNCDump, TAG as VNCTag
 from donpapi.lib.config import DonPAPIConfig, parse_config_file
 from donpapi.lib.database import Database, create_db_engine
@@ -62,6 +63,7 @@ COLLECTORS_LIST = {
     VaultsTag: VaultsDump,
     VNCTag: VNCDump,
     WifiTag: WifiDump,
+    CloudCredentialsTag: CloudCredentialsDump
 }
 
 def set_main_logger(logger , host = "\U0001F480"):
