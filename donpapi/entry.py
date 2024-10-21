@@ -28,20 +28,6 @@ from rich.progress import Progress
 import importlib.metadata
 from time import sleep
 
-from donpapi.collectors.mobaxterm import MobaXtermDump, TAG as MobaXtermTag
-from donpapi.collectors.wifi import WifiDump, TAG as WifiTag
-from donpapi.collectors.certificates import CertificatesDump, TAG as CertificateTag
-from donpapi.collectors.chromium import ChromiumBrowsersDump, TAG as ChromiumTag
-from donpapi.collectors.credman import CredentialManagerDump, TAG as CredmanTag
-from donpapi.collectors.firefox import FirefoxDump, TAG as FirefoxTag
-from donpapi.collectors.rdcman import RDCManagerDump, TAG as RDCManTag
-from donpapi.collectors.vaults import VaultsDump, TAG as VaultsTag
-from donpapi.collectors.recent_files import FilesDump, TAG as FilesTag
-from donpapi.collectors.sccm import SCCMDump, TAG as SCCMTag
-from donpapi.collectors.mremoteng import MRemoteNgDump, TAG as MRemoteNgTag
-from donpapi.collectors.vnc import VNCDump, TAG as VNCTag
-from donpapi.collectors.notepadpp import NotepadPPDump, TAG as NotepadPPTag
-from donpapi.collectors.powershellhistory import PowerShellHistoryDump, TAG as PowerShellHistoryTag
 from donpapi.lib.config import DonPAPIConfig, parse_config_file
 from donpapi.lib.database import Database, create_db_engine
 from donpapi.lib.paths import DPP_DB_FILE, DPP_LOG_FILE, DPP_PATH
@@ -50,23 +36,10 @@ from donpapi.lib.first_run import first_run, init_output_dir
 from donpapi.lib.utils import create_recover_file, load_recover_file, parse_credentials_files, parse_targets, update_recover_file
 from donpapi.lib.logger import donpapi_logger, donpapi_console
 
+from pkgutil import iter_modules
+from importlib import import_module
+from typing import List, Tuple
 
-COLLECTORS_LIST = {
-    ChromiumTag: ChromiumBrowsersDump,
-    CertificateTag: CertificatesDump,
-    CredmanTag: CredentialManagerDump,
-    FilesTag: FilesDump,
-    FirefoxTag: FirefoxDump,
-    MobaXtermTag: MobaXtermDump,
-    MRemoteNgTag: MRemoteNgDump,
-    RDCManTag: RDCManagerDump,
-    SCCMTag: SCCMDump,
-    VaultsTag: VaultsDump,
-    VNCTag: VNCDump,
-    WifiTag: WifiDump,
-    PowerShellHistoryTag: PowerShellHistoryDump,
-    NotepadPPTag: NotepadPPDump
-}
 
 def set_main_logger(logger , host = "\U0001F480"):
     logger.extra = {
@@ -74,16 +47,17 @@ def set_main_logger(logger , host = "\U0001F480"):
         "hostname": "",
     }
 
-def load_collectors(collectors_list):
-    collectors = []
-    if "All" in collectors_list:
-        for collector in COLLECTORS_LIST.values():
-            collectors.append(collector)
-    else:
-        for collector in collectors_list:
-            if COLLECTORS_LIST[collector] not in collectors:
-                collectors.append(COLLECTORS_LIST[collector])
-    return collectors
+def load_collectors(root, collectors_list) -> Tuple[List, List] :
+    loaded_collectors = []
+    available_collectors = []
+    for _, collector_name, _ in iter_modules(path=[f"{root}/collectors/"]):
+        available_collectors.append(collector_name)
+        if "All" in collectors_list:
+            loaded_collectors.append(getattr(import_module(f"collectors.{collector_name}"), collector_name))
+        else:
+            if collector_name in collectors_list:
+                loaded_collectors.append(getattr(import_module(f"collectors.{collector_name}"), collector_name))
+    return available_collectors, loaded_collectors
 
 def fetch_all_computers(options):
     from impacket.ldap import ldap, ldapasn1
@@ -211,6 +185,7 @@ def fetch_domain_backupkey(options, db: Database):
     return pvkbytes
 
 def main():
+    root = os.path.dirname(os.path.realpath(__file__))
     version = importlib.metadata.version("donpapi")
     parser = argparse.ArgumentParser(add_help = True, description = f"Password Looting at scale, with defense evasion in mind.\nVersion: {version}")
 
@@ -240,7 +215,7 @@ def main():
     group_authent.add_argument("-r", "--recover-file", metavar="/home/user/.donpapi/recover/recover_1718281433", type=str, help="The recover file path. If used, the other parameters will be ignored")
 
     group_attacks = collect_subparser.add_argument_group('attacks')
-    group_attacks.add_argument('-c','--collectors', action="store", default="All", help= ", ".join(COLLECTORS_LIST.keys())+", All (all previous) (default: All). Possible to chain multiple collectors comma separated")
+    group_attacks.add_argument('-c','--collectors', action="store", default="All",  help= ", ".join(load_collectors(root, [])[0])+", All (all previous) (default: All). Possible to chain multiple collectors comma separated")
     group_attacks.add_argument("-nr","--no-remoteops", action="store_true", help="Disable Remote Ops operations (basically no Remote Registry operations, no DPAPI System Credentials)")
     group_attacks.add_argument("--fetch-pvk", action="store_true", help=("Will automatically use domain backup key from database, and if not already dumped, will dump it on a domain controller"))
     group_attacks.add_argument("--pvkfile", action="store", help=("Pvk file with domain backup key"))
@@ -257,15 +232,29 @@ def main():
 
     set_main_logger(donpapi_logger)
 
+    # Stores the list of false positives usernames:
+    false_positivee = [
+        ".", 
+        "..", 
+        "desktop.ini", 
+        "Public", 
+        "Default", 
+        "Default User", 
+        "All Users", 
+        ".NET v4.5", 
+        ".NET v4.5 Classic"
+    ]
+    # Stores the maximum filesize 
+    max_filesize = 5000000
+
     # Parse args
-    
     if len(sys.argv)==1:
         parser.print_help()
         sys.exit(1)
     
     options = parser.parse_args()
+    
     # Init Logger
-
     if options.v == 1:
         donpapi_logger.logger.setLevel(logging.INFO)
     elif options.v >= 2:
@@ -274,7 +263,6 @@ def main():
         donpapi_logger.logger.setLevel(logging.ERROR)
 
     # Is it the first time you launch Donpapi?
-
     first_run()
 
     # Using custom folder ?
@@ -289,13 +277,12 @@ def main():
     donpapi_logger.display(f"Output directory at {output_dir}")
 
     # Load DB
-
     db_engine = create_db_engine(os.path.join(output_dir,DPP_DB_FILE))
     db = Database(db_engine)
 
     if options.action == "collect":
 
-    # Handle recover file
+        # Handle recover file
         current_target_recovered = []
 
         if options.recover_file is not None:
@@ -306,7 +293,6 @@ def main():
             current_target_recovered = target_recovered
 
         # Handle account
-
         if options.domain is None:
             options.domain = ''
 
@@ -327,7 +313,6 @@ def main():
             options.nthash = ''
 
         # Load files to decrypt maskerkeys
-
         pvkbytes, passwords, nthashes, masterkeys = parse_credentials_files(
             pvkfile=options.pvkfile,
             passwords_file=options.pwdfile,
@@ -338,7 +323,6 @@ def main():
             nthash=options.nthash)
 
         # Need to download Domain Backup Key?
-
         if options.fetch_pvk:
             if options.domain == "" or options.dc_ip is None:
                 donpapi_logger.error("--domain and --dc-ip is required with -fetch-pvk")
@@ -346,11 +330,9 @@ def main():
             pvkbytes = fetch_domain_backupkey(options, db)
 
         # Handling collectors
-
-        collectors = load_collectors(options.collectors.split(','))
+        _, collectors = load_collectors(root, options.collectors.split(","))
 
         # Target selection
-
         targets = []
         if hasattr(options, "target") and options.target:
             for target in options.target:
@@ -377,15 +359,28 @@ def main():
             donpapi_logger.debug(f"Targets :{targets}")
 
         # Parse config file ?
-            
         donpapi_config = DonPAPIConfig()
         if not options.no_config:
             donpapi_config = parse_config_file()
 
         # Let's rock
-        
         try:
-            asyncio.run(start_dpp(options, db, targets, current_target_recovered, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, output_dir))
+            asyncio.run(start_dpp(
+                options, 
+                db, 
+                targets, 
+                current_target_recovered, 
+                collectors,
+                pvkbytes, 
+                passwords, 
+                nthashes, 
+                masterkeys, 
+                donpapi_config, 
+                false_positivee,
+                max_filesize,
+                output_dir
+                )
+            )
         except Exception as e:
             if logging.getLogger().level == logging.DEBUG:
                 import traceback
@@ -404,7 +399,7 @@ def main():
     else:
         donpapi_logger.error(f"Unknown action {options.action}")
 
-async def start_dpp(options, db, targets, current_target_recovered, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, output_dir):
+async def start_dpp(options, db, targets, current_target_recovered, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, false_positive, max_size, output_dir):
     with ThreadPoolExecutor(max_workers=options.threads) as executor, Progress(console=donpapi_console) as progress:
         task = progress.add_task(f"[red][bold]DonPAPI running against {len(targets)} targets", total=len(targets))
         if len(current_target_recovered) > 0:
@@ -416,11 +411,11 @@ async def start_dpp(options, db, targets, current_target_recovered, collectors, 
                 donpapi_logger.verbose(f"DonPAPI finished for {len(targets)} targets. Sleeping {options.keep_collecting} seconds now before rerunning the attack")
                 sleep(options.keep_collecting)
         else:
-            create_dpp_thread(options, db, targets, current_target_recovered, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, output_dir, progress, task, executor)
+            create_dpp_thread(options, db, targets, current_target_recovered, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, false_positive, max_size, output_dir, progress, task, executor)
             donpapi_logger.verbose(f"DonPAPI finished for {len(targets)} targets.")
         
 
-def create_dpp_thread(options, db, targets, current_target_recovered, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, output_dir, progress_bar, task, executor):
+def create_dpp_thread(options, db, targets, current_target_recovered, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, false_positive, max_size, output_dir, progress_bar, task, executor):
     # Recover file
     progress_bar.update(task, completed=0 if len(current_target_recovered) == 0 else len(targets) - len(current_target_recovered))
     current_targets = copy.deepcopy(targets)
@@ -431,7 +426,7 @@ def create_dpp_thread(options, db, targets, current_target_recovered, collectors
     donpapi_logger.display(f"Recover file available at {recover_filename}")
     try:
         with open(recover_filename,"r+") as recover_file_handle:
-            future = [executor.submit(core_run,(options, db, target, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, output_dir)) for target in targets]
+            future = [executor.submit(core_run,(options, db, target, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, false_positive, max_size, output_dir)) for target in targets]
             for i in as_completed(future):
                 target_finished = i.result()
                 current_targets.remove(target_finished)
@@ -448,10 +443,10 @@ def create_dpp_thread(options, db, targets, current_target_recovered, collectors
         donpapi_logger.error(str(e))
 
 def core_run(datas):
-    options, db, target, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, output_dir = datas
+    options, db, target, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, false_positive, max_size, output_dir = datas
     donpapi_logger.debug(f"SeatBelt thread for {target} started")
     try:
-        _ = DonPAPICore(options, db, target, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, output_dir)
+        _ = DonPAPICore(options, db, target, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, false_positive, max_size, output_dir)
     except Exception as e:
         if logging.getLogger().level == logging.DEBUG or True:
             import traceback

