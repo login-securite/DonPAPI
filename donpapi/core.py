@@ -264,7 +264,7 @@ class DonPAPICore:
             # Dump SAM
             self.logger.display("Dumping SAM")
             self.dump_sam()
-            if self.sam_dump.items_found:
+            if hasattr(self.sam_dump, 'items_found') and self.sam_dump.items_found is not None:
                 self.logger.secret(f"Got {len(self.sam_dump.items_found)} accounts", "SAM")
             else:
                 self.logger.fail(f"No account found in SAM (maybe blocked by EDR)")
