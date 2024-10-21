@@ -16,7 +16,7 @@ from donpapi.lib.paths import DPP_LOOT_DIR_NAME
 
 
 class DonPAPICore:
-    def __init__(self, options: argparse.Namespace, db: Database, target: str, collectors: List, pvkbytes: bytes, plaintexts: Dict[str,str], nthashes: Dict[str,str], masterkeys: List[Masterkey], donpapi_config: DonPAPIConfig, output_dir:str) -> None:
+    def __init__(self, options: argparse.Namespace, db: Database, target: str, collectors: List, pvkbytes: bytes, plaintexts: Dict[str,str], nthashes: Dict[str,str], masterkeys: List[Masterkey], donpapi_config: DonPAPIConfig, false_positive: list, max_filesize: int, output_dir:str) -> None:
         self.options = options
         self.db = db
         self.host = target
@@ -30,8 +30,12 @@ class DonPAPICore:
         self.share = DEFAULT_CUSTOM_SHARE
         self.remoteops_allowed = not options.no_remoteops
         
-        self.output_dir = os.path.join(output_dir,DPP_LOOT_DIR_NAME,self.host)
-        os.makedirs(self.output_dir, exist_ok=True)
+        self.global_output_dir = os.path.join(output_dir, DPP_LOOT_DIR_NAME)
+        self.target_output_dir = os.path.join(output_dir, DPP_LOOT_DIR_NAME, self.host)
+        os.makedirs(self.target_output_dir, exist_ok=True)
+
+        self.false_positive = false_positive
+        self.max_filesize = max_filesize
         
         self.dploot_conn = None
         self.dpp_remoteops = None
@@ -298,7 +302,16 @@ class DonPAPICore:
 
         for collector in self.collectors:
             try:
-                collector(self.dploot_target, self.dploot_conn, self.masterkeys, self.options, self.logger, self).run()
+                collector(
+                    self.dploot_target, 
+                    self.dploot_conn, 
+                    self.masterkeys, 
+                    self.options, 
+                    self.logger, 
+                    self,
+                    self.false_positive, 
+                    self.max_filesize
+                ).run()
             except Exception as e:
                 self.logger.fail(f"Error during {collector.__name__}: {e}")
 

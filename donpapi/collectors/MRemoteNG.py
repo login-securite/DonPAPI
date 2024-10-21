@@ -1,18 +1,15 @@
-from base64 import b64decode
-import hashlib
 import ntpath
+import hashlib
 from typing import Any
 from lxml import objectify
+from base64 import b64decode
 from Cryptodome.Cipher import AES
 from dataclasses import dataclass
-
 from dploot.lib.target import Target
 from dploot.lib.smb import DPLootSMBConnection
 from donpapi.core import DonPAPICore
 from donpapi.lib.logger import DonPAPIAdapter
 
-
-TAG = "MRemoteNG"
 
 @dataclass
 class MRemoteNgEncryptionAttributes:
@@ -21,19 +18,25 @@ class MRemoteNgEncryptionAttributes:
     encryption_engine: str
     full_file_encryption: bool
 
-class MRemoteNgDump:
+class MRemoteNG:
     default_password = "mR3m"
+    user_directories = [
+        ("Users\\{username}\\AppData\\Local\\mRemoteNG", 
+        ('mRemoteNG.settings','confCons.xml')),
+        ("Users\\{username}\\AppData\\Roaming\\mRemoteNG", 
+        ('mRemoteNG.settings','confCons.xml'))
+    ]
 
-    user_directories = [("Users\\{username}\\AppData\\Local\\mRemoteNG", ('mRemoteNG.settings','confCons.xml')),
-                        ("Users\\{username}\\AppData\\Roaming\\mRemoteNG", ('mRemoteNG.settings','confCons.xml'))]
-
-    def __init__(self, target: Target, conn: DPLootSMBConnection, masterkeys: list, options: Any, logger: DonPAPIAdapter, context: DonPAPICore) -> None:
+    def __init__(self, target: Target, conn: DPLootSMBConnection, masterkeys: list, options: Any, logger: DonPAPIAdapter, context: DonPAPICore, false_positive: list, max_filesize: int) -> None:
+        self.tag = self.__class__.__name__
         self.target = target
         self.conn = conn
         self.masterkeys = masterkeys
         self.options = options
         self.logger = logger
         self.context = context
+        self.false_positive = false_positive
+        self.max_filesize = max_filesize
 
     def run(self):
         self.logger.display("Dumping MRemoteNg Passwords")
@@ -65,13 +68,14 @@ class MRemoteNgDump:
                             protocol = node_attribute["Protocol"]
                             port = node_attribute["Port"]
                             host = f" {protocol}://{hostname}:{port}" if node_attribute["Hostname"] != "" else "" 
-                            self.logger.secret(f"[{user}] {name}:{host} - {domain}\\{username}:{password}",TAG)
-                            self.context.db.add_secret(computer=self.context.host, collector=TAG, program=TAG, windows_user=user, target=host, username=f"{domain}\\{username}", password=password)
+                            self.logger.secret(f"[{user}] {name}:{host} - {domain}\\{username}:{password}", self.tag)
+                            self.context.db.add_secret(computer=self.context.host, collector=self.tag, program=self.tag, windows_user=user, target=host, username=f"{domain}\\{username}", password=password)
                     except KeyError:
                         continue
                     except Exception as e:
                         self.logger.verbose(f"Error while extracting mRemoteNg passwords in {tmp_confcons_path}: {e}")
                         continue
+                    
     def parse_xml_nodes(self, main):
         nodes = []
         for node in list(main.getchildren()):

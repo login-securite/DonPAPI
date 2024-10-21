@@ -62,10 +62,10 @@ def parse_targets(target):
 
 def parse_file_as_dict(filename: str) -> Dict[str,str]:
     arr = dict()
-    with open(filename, 'r') as lines:
+    with open(filename, "r") as lines:
         for line in lines:
-            line_modified = line.rstrip('\n')
-            line_modified = line_modified.split(':',1)
+            line_modified = line.rstrip("\n")
+            line_modified = line_modified.split(":" ,1)
             arr[line_modified[0]]=line_modified[1]
     return arr
 
@@ -77,7 +77,7 @@ def parse_credentials_files(pvkfile, passwords_file, nthashes_file, masterkeys_f
 
     if pvkfile is not None:
         try:
-            pvkbytes = open(pvkfile, 'rb').read()
+            pvkbytes = open(pvkfile, "rb").read()
         except Exception as e:
             donpapi_logger.error(f"Error while reading file {passwords_file}: {e}")
 
@@ -100,12 +100,12 @@ def parse_credentials_files(pvkfile, passwords_file, nthashes_file, masterkeys_f
             donpapi_logger.error(f"Error while reading file {masterkeys_file}: {e}")
 
     if username is not None:
-        if password is not None and password != '':
+        if password is not None and password != "":
             if passwords is None:
                 passwords = dict()
             passwords[username] = password
 
-        if nthash is not None and nthash != '':
+        if nthash is not None and nthash != "":
             if nthashes is None:
                 nthashes = dict()
             nthashes[username] = nthash.lower()
