@@ -11,7 +11,7 @@ from donpapi.lib.logger import DonPAPIAdapter
 TAG = "Files"
 
 class FilesDump:
-    false_positive = [".", "..", "desktop.ini", "Public", "Default", "Default User", "All Users", ".NET v4.5", ".NET v4.5 Classic"]
+    false_positive = ['.','..', 'desktop.ini','Public','Default','Default User','All Users']
     user_directories = ["Users\\{username}\\Recent", "Users\\{username}\\Desktop"]
     mask = ['xls','pdf','doc','txt','lnk','kbdx','xml','config','conf','bat','sh']
     max_filesize = 5000000
