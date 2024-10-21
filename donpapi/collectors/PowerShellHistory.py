@@ -42,9 +42,10 @@ class PowerShellHistory:
                     file_content = self.conn.readFile(self.context.share, new_path)
                     self.found += 1
 
-                    absolute_local_filepath = path.join(self.context.target_output_dir, *(new_path.split('\\')))
-                    dump_file_to_loot_directories(absolute_local_filepath, file_content)
-                    
-                    collector_dir_local_filepath = path.join(self.context.global_output_dir, self.tag, new_path.replace("\\", "_"))
-                    dump_file_to_loot_directories(collector_dir_local_filepath, file_content)
+                    if file_content is not None:
+                        absolute_local_filepath = path.join(self.context.target_output_dir, *(new_path.split('\\')))
+                        dump_file_to_loot_directories(absolute_local_filepath, file_content)
+                        
+                        collector_dir_local_filepath = path.join(self.context.global_output_dir, self.tag, new_path.replace("\\", "_"))
+                        dump_file_to_loot_directories(collector_dir_local_filepath, file_content)
                    

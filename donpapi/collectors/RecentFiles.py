@@ -1,11 +1,12 @@
+import os
 import ntpath
-from os import path 
 from typing import Any
 from dploot.lib.target import Target
 from dploot.lib.smb import DPLootSMBConnection
 from donpapi.core import DonPAPICore
 from donpapi.lib.logger import DonPAPIAdapter
 from donpapi.lib.utils import dump_file_to_loot_directories
+
 
 
 class RecentFiles:
@@ -49,10 +50,11 @@ class RecentFiles:
                         else:
                             if item.get_longname().find(".") == -1 and item.get_filesize() < self.max_filesize: 
                                 file_content = self.conn.readFile(self.context.share, new_path)
-                                self.found += 1
-                                absolute_local_filepath = path.join(self.context.target_output_dir, *(new_path.split("\\")))
-                                dump_file_to_loot_directories(absolute_local_filepath, file_content)
-                                
-                                collector_dir_local_filepath = path.join(self.context.global_output_dir, self.tag, new_path.replace("\\", "_"))
-                                dump_file_to_loot_directories(collector_dir_local_filepath, file_content)
+                                if file_content is not None:
+                                    self.found += 1
+                                    absolute_local_filepath = os.path.join(self.context.target_output_dir, *(new_path.split('\\')))
+                                    dump_file_to_loot_directories(absolute_local_filepath, file_content)
+                                    
+                                    collector_dir_local_filepath = os.path.join(self.context.global_output_dir, self.tag, new_path.replace("\\", "_"))
+                                    dump_file_to_loot_directories(collector_dir_local_filepath, file_content)
                                             
