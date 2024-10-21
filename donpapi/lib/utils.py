@@ -124,3 +124,8 @@ def is_guid(value: str):
         return True
     else:
         return False
+    
+def dump_file_to_loot_directories(local_filepath: str, file_content: bytes=b"") -> None:
+    os.makedirs(os.path.dirname(local_filepath), exist_ok = True)
+    with open(local_filepath, "wb") as f:
+        f.write(file_content)
