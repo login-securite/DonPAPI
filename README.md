@@ -159,6 +159,13 @@ By default, DonPAPI will collect:
 - **Vaults**: Vaults Credentials
 - **VNC**: VNC Credentials
 - **Wifi**: Wifi Credentials
+- **CloudCredentials**: Cloud credentials
+- **IDEProjects**: IDE projects files
+- **PasswordManagers**: Passwords managers files
+- **PowerShellHistory**: PowerShell history files
+- **RecycleBin**: Recycle Bins files
+- **SSHSecrets**: SSH secrets files (keys)
+- **VersionControlSystems**: Versioning tools (git for example)
 
 You can specify each one you want to collect with `--collectors` (SharpHound style). If you use `--fetch-pvk`, DonPAPI will automatically fetch the Domain Backup Key of the AD domain and use it to decrypt masterkeys. Otherwise, you can bring one with `--pvkfile`. `--pwdfile`, `--ntfile` are used to feed DonPAPI with secrets in order to unlock masterkeys. But if you have freshly decrypted masterkeys, you can use `--mkfile`.
 
