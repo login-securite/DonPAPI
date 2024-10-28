@@ -239,3 +239,19 @@ class DonPAPIRemoteOperations:
         self.logger.verbose(f"Downloading hive on share: {self.share_name} on filepath: {tmpFilePath}")
         remoteFileName = RemoteFile(self.smb_connection, tmpFilePath, shareName=self.share_name)
         return remoteFileName
+    
+    def getDefaultLoginAccount(self):
+        try:
+            ans = rrp.hBaseRegOpenKey(self.__rrp, self.__regHandle, 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon')
+            keyHandle = ans['phkResult']
+            dataType, dataValue = rrp.hBaseRegQueryValue(self.__rrp, keyHandle, 'DefaultUserName')
+            username = dataValue[:-1]
+            dataType, dataValue = rrp.hBaseRegQueryValue(self.__rrp, keyHandle, 'DefaultDomainName')
+            domain = dataValue[:-1]
+            rrp.hBaseRegCloseKey(self.__rrp, keyHandle)
+            if len(domain) > 0:
+                return '%s\\%s' % (domain,username)
+            else:
+                return username
+        except:
+            return None
