@@ -53,10 +53,10 @@ def load_collectors(root, collectors_list) -> Tuple[List, List] :
     for _, collector_name, _ in iter_modules(path=[f"{root}/collectors/"]):
         available_collectors.append(collector_name)
         if "All" in collectors_list:
-            loaded_collectors.append(getattr(import_module(f"collectors.{collector_name}"), collector_name))
+            loaded_collectors.append(getattr(import_module(f"donpapi.collectors.{collector_name}"), collector_name))
         else:
             if collector_name in collectors_list:
-                loaded_collectors.append(getattr(import_module(f"collectors.{collector_name}"), collector_name))
+                loaded_collectors.append(getattr(import_module(f"donpapi.collectors.{collector_name}"), collector_name))
     return available_collectors, loaded_collectors
 
 def fetch_all_computers(options):
