@@ -27,8 +27,8 @@ dpp = 'donpapi.entry:main'
 
 [tool.poetry.dependencies]
 python = "^3.9"
-impacket = "^0.11.0"
-dploot = "^2.7.3"
+impacket = "^0.12.0"
+dploot = "^3.1.0"
 rich = "^13.7.0"
 sqlalchemy = "^2.0.25"
 termcolor = "^2.4.0"
