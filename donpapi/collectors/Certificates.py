@@ -22,19 +22,17 @@ class Certificates:
 
     def run(self) -> None:
         self.logger.display(f"Dumping User{' and Machine' if self.context.remoteops_allowed else ''} Certificates")
-        certificates_triage = CertificatesTriage(target=self.target, conn=self.conn, masterkeys=self.masterkeys)
-        certificates = certificates_triage.triage_certificates()
-        for certificate in certificates:
+
+        def certificate_callback(certificate):
             cert_username = certificate.username.rstrip("\x00")
             filename = f"{cert_username}_{certificate.filename[:16]}.pfx"
             self.print_and_store(certificate, cert_username, filename)
-        
+
+        certificates_triage = CertificatesTriage(target=self.target, conn=self.conn, masterkeys=self.masterkeys, per_certificate_callback=certificate_callback,)
+        certificates_triage.triage_certificates()
         if self.context.remoteops_allowed:
-            system_certificates = certificates_triage.triage_system_certificates()
-            for certificate in system_certificates:
-                cert_username = certificate.username.rstrip("\x00")
-                filename = f"{cert_username}_{certificate.filename[:16]}.pfx"
-                self.print_and_store(certificate, cert_username, filename)
+            certificates_triage.triage_system_certificates()
+            
     
     def print_and_store(self, certificate, cert_username, filename) -> None:
         absolute_local_filepath = path.join(self.context.target_output_dir, filename)

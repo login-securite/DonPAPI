@@ -1,5 +1,6 @@
 import ntpath
 import hashlib
+import os
 from typing import Any
 from lxml import objectify
 from base64 import b64decode
@@ -9,6 +10,7 @@ from dploot.lib.target import Target
 from dploot.lib.smb import DPLootSMBConnection
 from donpapi.core import DonPAPICore
 from donpapi.lib.logger import DonPAPIAdapter
+from donpapi.lib.utils import dump_file_to_loot_directories
 
 
 @dataclass
@@ -48,6 +50,7 @@ class MRemoteNG:
                     content = self.conn.readFile(self.context.share, tmp_confcons_path)
                     if content is None:
                         continue
+                    dump_file_to_loot_directories(os.path.join(self.context.target_output_dir, *(tmp_confcons_path.split('\\'))), content)
                     main = objectify.fromstring(content)
                     try:
                         encryption_attributes = MRemoteNgEncryptionAttributes(
