@@ -2,6 +2,7 @@ from typing import Any
 from base64 import b64encode
 from dploot.lib.target import Target
 from dploot.lib.smb import DPLootSMBConnection
+from dploot.lib.utils import dump_looted_files_to_disk
 from dploot.triage.wifi import WifiTriage
 from donpapi.core import DonPAPICore
 from donpapi.lib.logger import DonPAPIAdapter
@@ -60,3 +61,4 @@ class Wifi:
                             program=wifi_cred.auth,
                             windows_user="SYSTEM",
                         )
+            dump_looted_files_to_disk(self.context.target_output_dir, wifi_triage.looted_files)

