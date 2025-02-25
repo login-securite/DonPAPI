@@ -84,8 +84,6 @@ class VNC:
             data =cipher.decrypt(password)
             return data
         except Exception as ex:
-            import traceback
-            traceback.print_exc()
             self.logger.error(f"Error while decrypting VNC password {password}: {ex}")
 
     def vnc_from_filesystem(self):

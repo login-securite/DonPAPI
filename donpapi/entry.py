@@ -437,7 +437,7 @@ def create_dpp_thread(options, db, targets, current_target_recovered, collectors
             [thread.cancel() for thread in future]
             executor.shutdown(wait=True)
     except Exception as e:
-        if logging.getLogger().level == logging.DEBUG or True:
+        if logging.getLogger().level == logging.DEBUG:
             import traceback
             traceback.print_exc()
         donpapi_logger.error(str(e))
@@ -448,7 +448,7 @@ def core_run(datas):
     try:
         _ = DonPAPICore(options, db, target, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, false_positive, max_size, output_dir)
     except Exception as e:
-        if logging.getLogger().level == logging.DEBUG or True:
+        if logging.getLogger().level == logging.DEBUG:
             import traceback
             traceback.print_exc()
         donpapi_logger.error(str(e))

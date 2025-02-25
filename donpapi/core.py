@@ -129,8 +129,6 @@ class DonPAPICore:
                     self.bootkey = self.dpp_remoteops.getBootKey()
             except Exception as e:
                 self.logger.error(f"Error while enabling remoteops: {e}")
-                import traceback
-                traceback.print_exc()
 
     def reg_query_value(self,path,key):
         ans = None
@@ -221,8 +219,6 @@ class DonPAPICore:
             )  
         except Exception as e:
             self.logger.error(f"Exception while requesting LAPS passwords: {e}")
-            import traceback
-            traceback.print_exc()
         
         # Great code from NXC
         results = [r for r in results if isinstance(r, ldapasn1.SearchResultEntry)]
