@@ -231,7 +231,7 @@ export default {
       return date.toISOString().split('T')[0];  // Format: YYYY-MM-DD
     },
     isCookieExpired(expiresUtc) {
-      if (!expiresUtc) return false;  // Cookies ohne Ablaufdatum sind aktiv
+      if (!expiresUtc) return false;
       const now = new Date();
       const expires = new Date(parseInt(expiresUtc) * 1000);
       return now > expires;
