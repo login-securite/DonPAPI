@@ -30,7 +30,7 @@ class SAMDump:
     def save_to_db(self, db, hostname):
         for sam_entry in self.items_found.values():
             db.add_samhash(sam_entry, hostname)
-            db.add_secret(computer=hostname,collector="SAM",windows_user=sam_entry["username"],username=sam_entry["username"],password=sam_entry["nthash"],program="SAM")
+            db.add_secret(computer=hostname,collector="SAM",windows_user="SYSTEM",username=sam_entry["username"],password=sam_entry["nthash"],program="SAM")
 
     def idle(self, _):
         pass
