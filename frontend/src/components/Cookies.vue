@@ -70,6 +70,9 @@
             <th class="text_column" scope="col">
               <span>
                 Creation Date
+                <div>
+                  <input type="text" style="visibility: hidden;">
+                </div>
               </span>
             </th>
             <th class="text_column" scope="col">
