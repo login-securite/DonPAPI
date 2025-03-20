@@ -78,6 +78,13 @@
             <th class="text_column" scope="col">
               <span>
                 Status
+                <div>
+                  <select v-model="status_search_value" @change="resetPageInfo(); getCookies();">
+                    <option value="">All</option>
+                    <option value="Active">Active</option>
+                    <option value="Expired">Expired</option>
+                  </select>
+                </div>
               </span>
             </th>
           </tr>
@@ -145,6 +152,7 @@ export default {
       allChecked: false,
       hideSecrets: false,
       creation_date_search_value: '',
+      status_search_value: '',
     };
   },
   methods: {
@@ -201,6 +209,7 @@ export default {
       path += 'windows_user=' + this.windows_user_search_value + '&';
       path += 'url=' + this.url_search_value + '&';
       path += 'creation_date=' + this.creation_date_search_value + '&';
+      path += 'status=' + this.status_search_value + '&';
       axios.get(path)
         .then((res) => {
           this.cookies = res.data.cookies;
