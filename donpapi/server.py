@@ -104,6 +104,8 @@ def start_gui(options, db_engine, db: Database) -> None:
         cookie_value_filter = request.args.get("cookie_value", default="", type=str)
         windows_user_filter = request.args.get("windows_user", default="", type=str)
         url_filter = request.args.get("url", default="", type=str)
+        creation_date_filter = request.args.get("creation_date", default="", type=str)
+        status_filter = request.args.get("status", default="", type=str)
 
         cookies = db.get_cookies(
             page=page,
@@ -113,6 +115,8 @@ def start_gui(options, db_engine, db: Database) -> None:
             cookie_value=cookie_value_filter,
             windows_user=windows_user_filter,
             url=url_filter,
+            creation_date=creation_date_filter,
+            status=status_filter,
         )
         return jsonify(cookies)
     

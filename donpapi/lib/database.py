@@ -6,6 +6,7 @@ import warnings
 from sqlite3 import connect
 from donpapi.lib.logger import donpapi_logger
 from donpapi.lib.paths import DPP_DB_FILE_PATH
+import time
 
 from sqlalchemy import MetaData, create_engine, func, Table, select
 from sqlalchemy.dialects.sqlite import Insert  # used for upsert
@@ -480,7 +481,7 @@ class Database:
         donpapi_logger.debug(f"get_cookie(id={id}) - results: {json_result}")
         return json_result
        
-    def get_cookies(self, page = 0, page_size = 500, computer_hostname = None, cookie_name = None, cookie_value = None, windows_user = None, url = None):
+    def get_cookies(self, page = 0, page_size = 500, computer_hostname = None, cookie_name = None, cookie_value = None, windows_user = None, url = None, creation_date = None, status = None):
         if page <0:
             page = 0
 
@@ -500,6 +501,15 @@ class Database:
         if url and url != "":
             url_like_term = func.lower(f"%{url}%")
             q = q.filter(func.lower(self.CookiesTable.c.url).like(url_like_term))
+        if creation_date and creation_date != "":
+            creation_date_like_term = func.lower(f"%{creation_date}%")
+            q = q.filter(func.lower(self.CookiesTable.c.creation_utc).like(creation_date_like_term))
+        if status and status != "":
+            current_time = int(time.time() * 1000)  # Current time in milliseconds
+            if status == 'Active':
+                q = q.filter((self.CookiesTable.c.expires_utc > current_time) | (self.CookiesTable.c.expires_utc.is_(None)))
+            elif status == 'Expired':
+                q = q.filter(self.CookiesTable.c.expires_utc <= current_time)
         results = self.conn.execute(q).all()
 
         cookies = [row._asdict() for row in results]
