@@ -228,16 +228,10 @@ export default {
       const creationTimestamp = Math.floor(parseInt(dateString) / 1000);
       const date = new Date(creationTimestamp);
       if (isNaN(date.getTime())) return dateString;
-      return date.toLocaleString('de-DE', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      return date.toISOString().split('T')[0];  // Format: YYYY-MM-DD
     },
     isCookieExpired(expiresUtc) {
-      if (!expiresUtc) return true;
+      if (!expiresUtc) return false;  // Cookies ohne Ablaufdatum sind aktiv
       const now = new Date();
       const expires = new Date(parseInt(expiresUtc) * 1000);
       return now > expires;

@@ -502,8 +502,12 @@ class Database:
             url_like_term = func.lower(f"%{url}%")
             q = q.filter(func.lower(self.CookiesTable.c.url).like(url_like_term))
         if creation_date and creation_date != "":
-            creation_date_like_term = func.lower(f"%{creation_date}%")
-            q = q.filter(func.lower(self.CookiesTable.c.creation_utc).like(creation_date_like_term))
+            try:
+                # Konvertiere das Datum in einen Unix-Timestamp (Millisekunden)
+                creation_timestamp = int(time.mktime(time.strptime(creation_date, "%Y-%m-%d")) * 1000)
+                q = q.filter(self.CookiesTable.c.creation_utc >= creation_timestamp)
+            except ValueError:
+                donpapi_logger.debug(f"Invalid date format for creation_date: {creation_date}")
         if status and status != "":
             current_time = int(time.time() * 1000)  # Current time in milliseconds
             if status == 'Active':
