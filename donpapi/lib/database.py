@@ -481,7 +481,7 @@ class Database:
         donpapi_logger.debug(f"get_cookie(id={id}) - results: {json_result}")
         return json_result
        
-    def get_cookies(self, page = 0, page_size = 500, computer_hostname = None, cookie_name = None, cookie_value = None, windows_user = None, url = None, creation_date = None, status = None):
+    def get_cookies(self, page = 0, page_size = 500, computer_hostname = None, cookie_name = None, cookie_value = None, windows_user = None, url = None, status = None):
         if page <0:
             page = 0
 
@@ -501,15 +501,8 @@ class Database:
         if url and url != "":
             url_like_term = func.lower(f"%{url}%")
             q = q.filter(func.lower(self.CookiesTable.c.url).like(url_like_term))
-        if creation_date and creation_date != "":
-            try:
-                # Konvertiere das Datum in einen Unix-Timestamp (Millisekunden)
-                creation_timestamp = int(time.mktime(time.strptime(creation_date, "%Y-%m-%d")) * 1000)
-                q = q.filter(self.CookiesTable.c.creation_utc >= creation_timestamp)
-            except ValueError:
-                donpapi_logger.debug(f"Invalid date format for creation_date: {creation_date}")
         if status and status != "":
-            current_time = int(time.time() * 1000)  # Current time in milliseconds
+            current_time = int(time.time() * 1000)
             if status == 'Active':
                 q = q.filter((self.CookiesTable.c.expires_utc > current_time) | (self.CookiesTable.c.expires_utc.is_(None)))
             elif status == 'Expired':

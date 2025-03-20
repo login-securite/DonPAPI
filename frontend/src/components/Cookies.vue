@@ -70,9 +70,6 @@
             <th class="text_column" scope="col">
               <span>
                 Creation Date
-                <div>
-                  <input type="text" placeholder="Search text" v-model="creation_date_search_value" @input="resetPageInfo(); getCookies();">
-                </div>
               </span>
             </th>
             <th class="text_column" scope="col">
@@ -151,7 +148,6 @@ export default {
       page_max: 1,
       allChecked: false,
       hideSecrets: false,
-      creation_date_search_value: '',
       status_search_value: '',
     };
   },
@@ -208,7 +204,6 @@ export default {
       path += 'cookie_value=' + this.cookie_value_search_value + '&';
       path += 'windows_user=' + this.windows_user_search_value + '&';
       path += 'url=' + this.url_search_value + '&';
-      path += 'creation_date=' + this.creation_date_search_value + '&';
       path += 'status=' + this.status_search_value + '&';
       axios.get(path)
         .then((res) => {
