@@ -67,6 +67,26 @@
                 </div>
               </span>
             </th>
+            <th class="text_column" scope="col">
+              <span>
+                Creation Date
+                <div>
+                  <input type="text" style="visibility: hidden;">
+                </div>
+              </span>
+            </th>
+            <th class="text_column" scope="col">
+              <span>
+                Status
+                <div>
+                  <select v-model="status_search_value" @change="resetPageInfo(); getCookies();">
+                    <option value="">All</option>
+                    <option value="Active">Active</option>
+                    <option value="Expired">Expired</option>
+                  </select>
+                </div>
+              </span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -91,6 +111,10 @@
               </span>
             </td>
             <td style="cursor: pointer;" @click="copyItemToClipBoard(cookie.url)">{{ cookie.url }}</td>
+            <td style="cursor: pointer;" @click="copyItemToClipBoard(cookie.creation_utc)">{{ formatDate(cookie.creation_utc) }}</td>
+            <td :class="{ 'expired': isCookieExpired(cookie.expires_utc) }">
+              {{ isCookieExpired(cookie.expires_utc) ? 'Expired' : 'Active' }}
+            </td>
           </tr>
         </tbody>
       </table>
@@ -127,6 +151,7 @@ export default {
       page_max: 1,
       allChecked: false,
       hideSecrets: false,
+      status_search_value: '',
     };
   },
   methods: {
@@ -182,6 +207,7 @@ export default {
       path += 'cookie_value=' + this.cookie_value_search_value + '&';
       path += 'windows_user=' + this.windows_user_search_value + '&';
       path += 'url=' + this.url_search_value + '&';
+      path += 'status=' + this.status_search_value + '&';
       axios.get(path)
         .then((res) => {
           this.cookies = res.data.cookies;
@@ -194,6 +220,19 @@ export default {
         .catch((error) => {
             console.error(error);
         });
+    },
+    formatDate(dateString) {
+      if (!dateString) return '';
+      const creationTimestamp = Math.floor(parseInt(dateString) / 1000);
+      const date = new Date(creationTimestamp);
+      if (isNaN(date.getTime())) return dateString;
+      return date.toISOString().split('T')[0];  // Format: YYYY-MM-DD
+    },
+    isCookieExpired(expiresUtc) {
+      if (!expiresUtc) return false;
+      const now = new Date();
+      const expires = new Date(parseInt(expiresUtc) * 1000);
+      return now > expires;
     },
   },
   created() {
