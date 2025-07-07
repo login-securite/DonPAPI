@@ -284,16 +284,15 @@ def main():
     donpapi_logger.display(f"DonPAPI Version {version}") 
     donpapi_logger.display(f"Output directory at {output_dir}")
 
-    # Parse config file ?
-    donpapi_config = DonPAPIConfig()
-    if not options.no_config:
-        donpapi_config = parse_config_file()
-
     # Load DB
     db_engine = create_db_engine(os.path.join(output_dir,DPP_DB_FILE))
     db = Database(db_engine)
 
     if options.action == "collect":
+        # Parse config file ?
+        donpapi_config = DonPAPIConfig() 
+        if not options.no_config:
+            donpapi_config = parse_config_file()
 
         # Handle recover file
         current_target_recovered = []
