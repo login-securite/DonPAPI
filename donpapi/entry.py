@@ -50,12 +50,13 @@ def set_main_logger(logger , host = "\U0001F480"):
 def load_collectors(root, collectors_list) -> Tuple[List, List] :
     loaded_collectors = []
     available_collectors = []
+    collectors_list = [c.lower() for c in collectors_list]
     for _, collector_name, _ in iter_modules(path=[f"{root}/collectors/"]):
         available_collectors.append(collector_name)
-        if "All" in collectors_list:
+        if "all" in collectors_list:
             loaded_collectors.append(getattr(import_module(f"donpapi.collectors.{collector_name}"), collector_name))
         else:
-            if collector_name in collectors_list:
+            if collector_name.lower() in collectors_list:
                 loaded_collectors.append(getattr(import_module(f"donpapi.collectors.{collector_name}"), collector_name))
     return available_collectors, loaded_collectors
 
