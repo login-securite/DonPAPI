@@ -197,6 +197,7 @@ def main():
     collect_subparser.add_argument("--keep-collecting", type=int, action="store", metavar="seconds",  help="Rerun the attack against all targets after X seconds, X being the value")
     collect_subparser.add_argument("--threads", default=50, type=int, metavar="Number of threads",  help="Number of threads (default: 50)")
     collect_subparser.add_argument('--no-config', action="store_true", help="Do not load donpapi config file (~/.donpapi/donpapi.conf)")
+    collect_subparser.add_argument("--no-progress", action="store_true", default=False, help="Disable the Rich progress bar while keeping regular output")
 
     group_authent = collect_subparser.add_argument_group("authentication")
 
@@ -291,6 +292,8 @@ def main():
             options_recovered, target_recovered = load_recover_file(recover_file_path=options.recover_file)
             options = argparse.Namespace(**options_recovered)
             current_target_recovered = target_recovered
+            # Backward compatibility with older recover files.
+            options.no_progress = bool(getattr(options, "no_progress", False))
 
         # Handle account
         if options.domain is None:
@@ -400,7 +403,7 @@ def main():
         donpapi_logger.error(f"Unknown action {options.action}")
 
 async def start_dpp(options, db, targets, current_target_recovered, collectors, pvkbytes, passwords, nthashes, masterkeys, donpapi_config, false_positive, max_size, output_dir):
-    with ThreadPoolExecutor(max_workers=options.threads) as executor, Progress(console=donpapi_console) as progress:
+    with ThreadPoolExecutor(max_workers=options.threads) as executor, Progress(console=donpapi_console, disable=options.no_progress,) as progress:
         task = progress.add_task(f"[red][bold]DonPAPI running against {len(targets)} targets", total=len(targets))
         if len(current_target_recovered) > 0:
             progress.update(task, completed=len(targets)-len(current_target_recovered))
