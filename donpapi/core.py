@@ -2,11 +2,13 @@ import argparse
 import json
 import ntpath
 import os
+import traceback
 from typing import Dict, List
 from impacket.dcerpc.v5 import rrp
 from donpapi.lib.config import DEFAULT_CUSTOM_SHARE, DonPAPIConfig
 from donpapi.lib.database import Database
-from donpapi.lib.secretsdump import DonPAPIRemoteOperations, LSADump, SAMDump
+from donpapi.lib import regsecrets
+from donpapi.lib import secretsdump
 from dploot.lib.target import Target
 from dploot.lib.smb import DPLootSMBConnection
 from dploot.triage.masterkeys import MasterkeysTriage, Masterkey
@@ -46,6 +48,8 @@ class DonPAPICore:
         self.lsa_dump = None
         self.dpapi_systemkey = None
         self.hostname = None
+        self.do_kerberos = options.k
+        self.use_secretsdump = options.secretsdump
         self.dploot_target = Target.create(
             domain=options.domain,
             username=options.username if options.username is not None else "",
@@ -116,15 +120,28 @@ class DonPAPICore:
         if self.dploot_conn is not None and self.remoteops_allowed:
             try:
                 if self.dpp_remoteops is None:
-                    self.dpp_remoteops = DonPAPIRemoteOperations(
-                        smb_connection=self.dploot_conn.smb_session,
-                        logger=self.logger,
-                        share_name=self.donpapi_config.custom_share,
-                        file_extension=self.donpapi_config.custom_file_extension,
-                        filename_regex=self.donpapi_config.custom_filename_regex,
-                        remote_filepath=self.donpapi_config.custom_remote_filepath,
-                    )
+                    if self.use_secretsdump:
+                        self.dpp_remoteops = secretsdump.DonPAPIRemoteOperations(
+                            smb_connection=self.dploot_conn.smb_session,
+                            logger=self.logger,
+                            share_name=self.donpapi_config.custom_share,
+                            file_extension=self.donpapi_config.custom_file_extension,
+                            filename_regex=self.donpapi_config.custom_filename_regex,
+                            remote_filepath=self.donpapi_config.custom_remote_filepath,
+                        )
+                    else:
+                        self.dpp_remoteops = regsecrets.DonPAPIRemoteOperations(
+                            smbConnection=self.dploot_conn.smb_session,
+                            doKerberos=self.do_kerberos
+                        )
+                        
                     self.dpp_remoteops.enableRegistry()
+                
+                if self.use_secretsdump:
+                    self.rrp = self.dpp_remoteops._DonPAPIRemoteOperations__rrp
+                else:
+                    self.rrp = self.dpp_remoteops._RemoteOperations__rrp
+                    
                 if self.bootkey is None:
                     self.bootkey = self.dpp_remoteops.getBootKey()
             except Exception as e:
@@ -136,45 +153,50 @@ class DonPAPICore:
             self.enable_remoteops()
         if path[:4] == "HKCU":
             path = path[5:]
-            ans = rrp.hOpenCurrentUser(self.dpp_remoteops._DonPAPIRemoteOperations__rrp)
+            ans = rrp.hOpenCurrentUser(self.rrp)
         else:
             if path[:4] == "HKLM":
                 path = path[5:]
-            ans = rrp.hOpenLocalMachine(self.dpp_remoteops._DonPAPIRemoteOperations__rrp)
+            ans = rrp.hOpenLocalMachine(self.rrp)
         reg_handle = ans["phKey"]
         ans = rrp.hBaseRegOpenKey(
-            self.dpp_remoteops._DonPAPIRemoteOperations__rrp,
-            reg_handle,
-            path,
-        )
+            self.rrp, reg_handle, path)
         key_handle = ans["phkResult"]
-        value = rrp.hBaseRegQueryValue(self.dpp_remoteops._DonPAPIRemoteOperations__rrp, key_handle, key)
+        value = rrp.hBaseRegQueryValue(self.rrp, key_handle, key)
         return value
 
     def dump_sam(self) -> Dict[str,str]:
         if self.sam_dump is not None:
             return self.sam_dump
         self.enable_remoteops()
-        samdump = SAMDump(remote_ops=self.dpp_remoteops, bootkey=self.bootkey)
+        if self.use_secretsdump:
+            samdump = secretsdump.SAMDump(remote_ops=self.dpp_remoteops, bootkey=self.bootkey)
+        else:
+            samdump = regsecrets.SAMDump(remote_ops=self.dpp_remoteops, bootkey=self.bootkey)
         try:
             samdump.dump()
             samdump.save_to_db(self.db, self.host)
             self.sam_dump = samdump
         except:
             self.logger.fail("Could not dump SAM.")
+            self.logger.debug(traceback.format_exc())
         return self.sam_dump
     
     def dump_lsa(self) -> Dict[str,str]:
         if self.lsa_dump is not None:
             return self.lsa_dump
         self.enable_remoteops()
-        lsadump = LSADump(remote_ops=self.dpp_remoteops, bootkey=self.bootkey)
+        if self.use_secretsdump:
+            lsadump = secretsdump.LSADump(remote_ops=self.dpp_remoteops, bootkey=self.bootkey)
+        else:
+            lsadump = regsecrets.LSADump(remote_ops=self.dpp_remoteops, bootkey=self.bootkey)
         try:
             lsadump.dump()
             lsadump.save_secrets_to_db(self.db, self.host)
             self.lsa_dump = lsadump
         except:
             self.logger.fail("Could not dump LSA")
+            self.logger.debug(traceback.format_exc())
         return self.lsa_dump
     
     def get_laps_pass(self, hostname):

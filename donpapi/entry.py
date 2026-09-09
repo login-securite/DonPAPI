@@ -217,6 +217,7 @@ def main():
     group_attacks = collect_subparser.add_argument_group('attacks')
     group_attacks.add_argument('-c','--collectors', action="store", default="All",  help= ", ".join(load_collectors(root, [])[0])+", All (all previous) (default: All). Possible to chain multiple collectors comma separated")
     group_attacks.add_argument("-nr","--no-remoteops", action="store_true", help="Disable Remote Ops operations (basically no Remote Registry operations, no DPAPI System Credentials)")
+    group_attacks.add_argument("-sc","--secretsdump", action="store_true", help="Use secretsdump instead of regsecrets for dumping SAM and LSA")
     group_attacks.add_argument("--fetch-pvk", action="store_true", help=("Will automatically use domain backup key from database, and if not already dumped, will dump it on a domain controller"))
     group_attacks.add_argument("--pvkfile", action="store", help=("Pvk file with domain backup key"))
     group_attacks.add_argument("--pwdfile", action="store", help=("File containing username:password that will be used eventually to decrypt masterkeys"))

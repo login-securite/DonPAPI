@@ -1,6 +1,6 @@
 # DonPAPI
 
-DonPAPI automates secrets dump remotely on multiple Windows computers, with defense evasion in mind.
+DonPAPI automates regsecrets (or secretsdump) remotely on multiple Windows computers, with defense evasion in mind.
 
 ![DonPAPI Logo](./assets/Logo%20DonPapi.png)
 
@@ -132,6 +132,7 @@ attacks:
                         Chromium, Certificates, CredMan, Files, Firefox, MobaXterm, MRemoteNG, RDCMan, SCCM, Vaults, VNC, Wifi, All (all
                         previous) (default: All)
   -nr, --no-remoteops   Disable Remote Ops operations (basically no Remote Registry operations, no DPAPI System Credentials)
+  -sc, --secretsdump    Use secretsdumps instead of regsecrets for dumping SAM and LSA
   --fetch-pvk           Will automatically use domain backup key from database, and if not already dumped, will dump it on a domain controller
   --pvkfile PVKFILE     Pvk file with domain backup key
   --pwdfile PWDFILE     File containing username:password that will be used eventually to decrypt masterkeys
