@@ -19,7 +19,11 @@ def init_output_dir(directory = DPP_PATH):
         if directory != DPP_PATH:
             donpapi_logger.display(f"Creating custom directory at {directory}")
         os.mkdir(directory)
-        for dirname in [DPP_REPORT_DIR_NAME, DPP_LOOT_DIR_NAME, DPP_RECOVER_DIR_NAME]:
-            os.mkdir(os.path.join(directory, dirname))
-    
+
+    # Create the sub-directories even when `directory` already exists. A custom -o
+    # path that is already present would otherwise skip their creation, leaving no
+    # "recover" directory and breaking recover-file writing (issue #123).
+    for dirname in [DPP_REPORT_DIR_NAME, DPP_LOOT_DIR_NAME, DPP_RECOVER_DIR_NAME]:
+        os.makedirs(os.path.join(directory, dirname), exist_ok=True)
+
     init_db(custom_db_dir = os.path.join(directory,DPP_DB_FILE))
