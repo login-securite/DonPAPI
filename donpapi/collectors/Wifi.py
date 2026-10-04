@@ -24,7 +24,7 @@ class Wifi:
         if self.context.remoteops_allowed:
             self.logger.display("Dumping Wifi profiles")
             try:
-                wifi_triage = WifiTriage(target=self.target, conn=self.conn, masterkeys=self.masterkeys)
+                wifi_triage = WifiTriage(target=self.target, conn=self.conn, masterkeys=self.masterkeys, false_positive=self.false_positive)
                 wifi_creds = wifi_triage.triage_wifi()
             except Exception as e:
                 self.logger.debug(f"Error while looting wifi: {e}")

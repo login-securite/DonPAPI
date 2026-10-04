@@ -47,10 +47,10 @@ class Vaults:
                     target=vault.resource
                 )
 
-        vaults_triage = VaultsTriage(target=self.target, conn=self.conn, masterkeys=self.masterkeys)
+        vaults_triage = VaultsTriage(target=self.target, conn=self.conn, masterkeys=self.masterkeys, per_vault_callback=vaults_callback, false_positive=self.false_positive)
+        
         vaults_triage.triage_vaults()
         if self.context.remoteops_allowed:
             vaults_triage.triage_system_vaults()
 
         dump_looted_files_to_disk(self.context.target_output_dir, vaults_triage.looted_files)
-            

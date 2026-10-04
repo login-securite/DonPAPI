@@ -272,6 +272,7 @@ class DonPAPICore:
                 passwords=self.plaintexts,
                 nthashes=self.nthashes,
                 dpapiSystem=self.dpapi_systemkey,
+                false_positive=self.false_positive,
             )
             masterkeys += masterkeys_triage.triage_masterkeys()
             if self.remoteops_allowed and self.lsa_dump is not None:

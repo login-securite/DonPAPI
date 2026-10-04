@@ -45,6 +45,7 @@ class Chromium:
                         last_access_utc=credential.last_access_utc,
                     )
 
-        browser_triage = BrowserTriage(target=self.target, conn=self.conn, masterkeys=self.masterkeys, per_secret_callback=browser_callback)
+        browser_triage = BrowserTriage(target=self.target, conn=self.conn, masterkeys=self.masterkeys, per_secret_callback=browser_callback, false_positive=self.false_positive)
+        
         browser_triage.triage_browsers(gather_cookies=True)
         dump_looted_files_to_disk(self.context.target_output_dir, browser_triage.looted_files)

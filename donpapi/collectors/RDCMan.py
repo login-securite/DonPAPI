@@ -21,7 +21,7 @@ class RDCMan:
 
     def run(self):
         self.logger.display("Dumping User's RDCManager")
-        rdg_triage = RDGTriage(target=self.target, conn=self.conn, masterkeys=self.masterkeys)
+        rdg_triage = RDGTriage(target=self.target, conn=self.conn, masterkeys=self.masterkeys, false_positive=self.false_positive)
         rdcman_files, rdgfiles = rdg_triage.triage_rdcman()
         for rdcman_file in rdcman_files:
             if rdcman_file is None:

@@ -35,6 +35,7 @@ from donpapi.core import DonPAPICore
 from donpapi.lib.first_run import first_run, init_output_dir
 from donpapi.lib.utils import create_recover_file, load_recover_file, parse_credentials_files, parse_targets, update_recover_file
 from donpapi.lib.logger import donpapi_logger, donpapi_console
+from donpapi.lib.consts import FALSE_POSITIVES
 
 from pkgutil import iter_modules
 from importlib import import_module
@@ -197,6 +198,7 @@ def main():
     collect_subparser.add_argument("--keep-collecting", type=int, action="store", metavar="seconds",  help="Rerun the attack against all targets after X seconds, X being the value")
     collect_subparser.add_argument("--threads", default=50, type=int, metavar="Number of threads",  help="Number of threads (default: 50)")
     collect_subparser.add_argument('--no-config', action="store_true", help="Do not load donpapi config file (~/.donpapi/donpapi.conf)")
+    collect_subparser.add_argument("--false-positive", default=FALSE_POSITIVES, action="extend", nargs="+", help=f"Specify a list of \"false positive\" usernames to avoid collecting them (will extend the existing list: {FALSE_POSITIVES}).")
 
     group_authent = collect_subparser.add_argument_group("authentication")
 
@@ -232,19 +234,7 @@ def main():
 
 
     set_main_logger(donpapi_logger)
-
-    # Stores the list of false positives usernames:
-    false_positivee = [
-        ".", 
-        "..", 
-        "desktop.ini", 
-        "Public", 
-        "Default", 
-        "Default User", 
-        "All Users", 
-        ".NET v4.5", 
-        ".NET v4.5 Classic"
-    ]
+    
     # Stores the maximum filesize 
     max_filesize = 5000000
 
@@ -252,9 +242,9 @@ def main():
     if len(sys.argv)==1:
         parser.print_help()
         sys.exit(1)
-    
+
     options = parser.parse_args()
-    
+
     # Init Logger
     if options.v == 1:
         donpapi_logger.logger.setLevel(logging.INFO)
@@ -292,6 +282,9 @@ def main():
             options_recovered, target_recovered = load_recover_file(recover_file_path=options.recover_file)
             options = argparse.Namespace(**options_recovered)
             current_target_recovered = target_recovered
+
+        # Remove duplicates from false positive list.
+        false_positive = list(set(options.false_positive))
 
         # Handle account
         if options.domain is None:
@@ -377,7 +370,7 @@ def main():
                 nthashes, 
                 masterkeys, 
                 donpapi_config, 
-                false_positivee,
+                false_positive,
                 max_filesize,
                 output_dir
                 )
