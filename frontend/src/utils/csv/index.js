@@ -1,8 +1,16 @@
 export function arrayToCsv(data) {
     const array = [Object.keys(data[0])].concat(data)
 
-    return array.map(it => {
-        return Object.values(it).toString()
+    return array.map(row => {
+        return Object.values(row).map(value => {
+            const stringValue = String(value);
+            
+            if (stringValue.includes('"') || stringValue.includes(',') || stringValue.includes('\n')) {
+                return `"${stringValue.replace(/"/g, '""')}"`;
+            }
+            
+            return stringValue;
+        }).join(',');
     }).join('\n');
 }
 
