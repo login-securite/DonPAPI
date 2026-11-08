@@ -28,8 +28,7 @@ class DonPAPIAdapter(logging.LoggerAdapter):
                 )
             ],
         )
-        self.logger = logging.getLogger("donpapi")
-        self.extra = extra
+        super().__init__(logging.getLogger("donpapi"), extra)
         self.output_file = None
 
         logging.getLogger("impacket").disabled = True
