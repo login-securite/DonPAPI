@@ -30,6 +30,9 @@ class DonPAPIAdapter(logging.LoggerAdapter):
         )
         self.logger = logging.getLogger("donpapi")
         self.extra = extra
+        # This __init__ bypasses LoggerAdapter.__init__, and since Python 3.13
+        # LoggerAdapter.process() reads self.merge_extra unconditionally.
+        self.merge_extra = False
         self.output_file = None
 
         logging.getLogger("impacket").disabled = True
