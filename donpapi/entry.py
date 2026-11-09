@@ -153,11 +153,18 @@ def fetch_domain_backupkey(options, db: Database):
         from dploot.lib.smb import DPLootSMBConnection
         from dploot.triage.backupkey import BackupkeyTriage
         try:
+            # NTLM: reach the DC by IP, since the bare domain name is not
+            # guaranteed to be resolvable by the SMB client. Kerberos keeps the
+            # domain name, as the realm/KDC lookup relies on it.
+            if options.dc_ip and not (options.k or options.aesKey):
+                dc_host = options.dc_ip
+            else:
+                dc_host = options.domain if options.domain != "" else options.dc_ip
             dc_target = Target.create(
                 domain=options.domain,
                 username=options.username if options.username is not None else "",
                 password=options.password,
-                target=options.domain if options.domain != "" else options.dc_ip,
+                target=dc_host,
                 lmhash=options.lmhash,
                 nthash=options.nthash,
                 do_kerberos=options.k,
@@ -167,9 +174,9 @@ def fetch_domain_backupkey(options, db: Database):
             )
 
             dc_conn = DPLootSMBConnection(dc_target)
-            dc_conn.connect()  # Connect to DC
-
-            if dc_conn.is_admin():
+            if dc_conn.connect() is None:  # Connect to DC
+                donpapi_logger.error(f"Could not connect to {dc_host} over SMB")
+            elif dc_conn.is_admin():
                 donpapi_logger.display(f"Exporting domain backup key from {dc_conn.smb_session.getServerName()}.{dc_conn.smb_session.getRemoteHost()}")
                 backupkey_triage = BackupkeyTriage(target=dc_target, conn=dc_conn)
                 backupkey = backupkey_triage.triage_backupkey()
