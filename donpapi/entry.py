@@ -343,7 +343,7 @@ def main():
                         targets.extend(fetch_all_computers(options))
                     else:
                         donpapi_logger.error("--domain required with --target ALL")
-                        return
+                        sys.exit(1)
                 else:
                     if os.path.exists(target) and os.path.isfile(target):
                         with open(target) as target_file:
@@ -354,7 +354,7 @@ def main():
 
         if len(targets) <= 0:
             donpapi_logger.error("No target loaded. Exiting.")
-            return
+            sys.exit(1)
         else:
             donpapi_logger.display("Loaded {i} targets".format(i=len(targets)))
             donpapi_logger.debug(f"Targets :{targets}")
